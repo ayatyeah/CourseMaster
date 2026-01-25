@@ -4,7 +4,11 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5da18190-a379-4f81-9d0d-b918aa5bbbb8" name="Changes" comment="fr" />
+    <list default="true" id="5da18190-a379-4f81-9d0d-b918aa5bbbb8" name="Changes" comment="v2">
+      <change afterPath="$PROJECT_DIR$/.do/app.yaml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.env.example" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -34,6 +38,9 @@
   &quot;associatedIndex&quot;: 0
 }</component>
   <component name="ProjectId" id="36piBuHQ4vp1eWOvbvRNccuDFbU" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
@@ -89,7 +96,7 @@
       <workItem from="1769351733297" duration="3190000" />
       <workItem from="1769361574645" duration="11000" />
       <workItem from="1769361605013" duration="188000" />
-      <workItem from="1769362841281" duration="454000" />
+      <workItem from="1769362841281" duration="610000" />
     </task>
     <task id="LOCAL-00001" summary="fr">
       <option name="closed" value="true" />
@@ -99,7 +106,15 @@
       <option name="project" value="LOCAL" />
       <updated>1769363232929</updated>
     </task>
-    <option name="localTasksCounter" value="2" />
+    <task id="LOCAL-00002" summary="v2">
+      <option name="closed" value="true" />
+      <created>1769363320747</created>
+      <option name="number" value="00002" />
+      <option name="presentableId" value="LOCAL-00002" />
+      <option name="project" value="LOCAL" />
+      <updated>1769363320747</updated>
+    </task>
+    <option name="localTasksCounter" value="3" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -118,6 +133,7 @@
   </component>
   <component name="VcsManagerConfiguration">
     <MESSAGE value="fr" />
-    <option name="LAST_COMMIT_MESSAGE" value="fr" />
+    <MESSAGE value="v2" />
+    <option name="LAST_COMMIT_MESSAGE" value="v2" />
   </component>
 </project>
