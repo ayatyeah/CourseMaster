@@ -1,0 +1,21 @@
+{
+  "name": "coursemaster",
+  "version": "1.0.0",
+  "description": "Full-stack CRUD application for managing courses",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "nodemon app.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["courses", "crud", "mongodb", "express", "dashboard"],
+  "author": "SE-2425",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.18.2",
+    "mongodb": "^5.7.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}

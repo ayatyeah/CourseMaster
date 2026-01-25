@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CourseMaster - Admin Dashboard</title>
+    <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎓</text></svg>">
+</head>
+<body>
+<div class="container">
+    <nav class="navbar glass">
+        <span class="nav-logo">
+            <i class="fas fa-graduation-cap"></i>
+            CourseMaster
+            <span class="badge">ADMIN</span>
+        </span>
+        <div class="nav-links">
+            <a href="/" class="active">
+                <i class="fas fa-tachometer-alt"></i> Dashboard
+            </a>
+            <a href="#" id="apiDocsBtn">
+                <i class="fas fa-code"></i> API Docs
+            </a>
+            <a href="#" id="logoutBtn">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
+        </div>
+    </nav>
+
+    <header class="admin-header">
+        <div class="admin-header-content">
+            <h1 class="logo">🎓 CourseMaster Dashboard</h1>
+            <p class="tagline">Complete CRUD Management System for Online Courses</p>
+            <div class="stats">
+                <div class="stat-card">
+                    <i class="fas fa-book-open"></i>
+                    <span class="stat-count" id="totalCourses">0</span>
+                    <span class="stat-label">Total Courses</span>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-dollar-sign"></i>
+                    <span class="stat-count" id="avgPrice">$0</span>
+                    <span class="stat-label">Average Price</span>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-clock"></i>
+                    <span class="stat-count" id="latestUpdate">Today</span>
+                    <span class="stat-label">Last Updated</span>
+                </div>
+                <div class="stat-card">
+                    <i class="fas fa-database"></i>
+                    <span class="stat-count" id="totalValue">$0</span>
+                    <span class="stat-label">Total Value</span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="dashboard">
+        <div class="dashboard-grid">
+            <div class="crud-section glass">
+                <div class="section-header">
+                    <h2><i class="fas fa-plus-circle"></i> Create New Course</h2>
+                </div>
+                <div class="form-card">
+                    <form id="createForm">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="title"><i class="fas fa-heading"></i> Course Title *</label>
+                                <input type="text" id="title" placeholder="e.g., Advanced JavaScript & React Masterclass" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="price"><i class="fas fa-dollar-sign"></i> Price ($) *</label>
+                                <input type="number" id="price" step="0.01" min="0" placeholder="299.99" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="description"><i class="fas fa-align-left"></i> Description</label>
+                            <textarea id="description" rows="4" placeholder="Detailed course description including learning outcomes, prerequisites, and target audience..."></textarea>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Create Course
+                            </button>
+                            <button type="reset" class="btn btn-secondary">
+                                <i class="fas fa-undo"></i> Clear Form
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="crud-section glass">
+                <div class="section-header">
+                    <h2><i class="fas fa-edit"></i> Update Course</h2>
+                </div>
+                <div class="form-card">
+                    <div class="form-group">
+                        <label for="searchCourse"><i class="fas fa-search"></i> Search Course by ID</label>
+                        <div class="search-box">
+                            <input type="text" id="searchCourse" placeholder="Enter course ID or click search from table...">
+                            <button id="searchBtn" class="btn btn-small btn-primary">
+                                <i class="fas fa-search"></i> Search
+                            </button>
+                        </div>
+                    </div>
+                    <form id="updateForm" style="display: none;">
+                        <input type="hidden" id="updateId">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="updateTitle"><i class="fas fa-heading"></i> Course Title *</label>
+                                <input type="text" id="updateTitle" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="updatePrice"><i class="fas fa-dollar-sign"></i> Price ($) *</label>
+                                <input type="number" id="updatePrice" step="0.01" min="0" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="updateDescription"><i class="fas fa-align-left"></i> Description</label>
+                            <textarea id="updateDescription" rows="4"></textarea>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-warning">
+                                <i class="fas fa-sync-alt"></i> Update Course
+                            </button>
+                            <button type="button" id="cancelUpdate" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="courses-section glass">
+            <div class="section-header">
+                <h2><i class="fas fa-list-alt"></i> All Courses</h2>
+                <div class="section-actions">
+                    <div class="filter-options">
+                        <select id="sortFilter">
+                            <option value="">Sort By</option>
+                            <option value="price:asc">Price: Low to High</option>
+                            <option value="price:desc">Price: High to Low</option>
+                            <option value="createdAt:desc">Newest First</option>
+                            <option value="createdAt:asc">Oldest First</option>
+                        </select>
+                        <input type="number" id="minPriceFilter" placeholder="Min $" style="width: 100px; padding: 10px;">
+                        <input type="number" id="maxPriceFilter" placeholder="Max $" style="width: 100px; padding: 10px;">
+                    </div>
+                    <button id="refreshBtn" class="btn btn-small btn-primary">
+                        <i class="fas fa-redo"></i> Refresh
+                    </button>
+                    <button id="exportBtn" class="btn btn-small btn-secondary">
+                        <i class="fas fa-download"></i> Export
+                    </button>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table class="courses-table">
+                    <thead>
+                        <tr>
+                            <th width="200">ID</th>
+                            <th width="250">Title</th>
+                            <th>Description</th>
+                            <th width="120">Price</th>
+                            <th width="150">Created</th>
+                            <th width="120">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="coursesTableBody">
+                        <tr>
+                            <td colspan="6" class="empty-state">
+                                <i class="fas fa-spinner fa-spin"></i>
+                                <p>Loading courses...</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="crud-section glass">
+            <div class="section-header">
+                <h2><i class="fas fa-chart-line"></i> Analytics</h2>
+            </div>
+            <div class="form-card">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                    <div>
+                        <h3 style="margin-bottom: 20px; color: var(--text);">
+                            <i class="fas fa-filter"></i> Quick Filter
+                        </h3>
+                        <div class="form-group">
+                            <label><i class="fas fa-search-dollar"></i> Price Range</label>
+                            <div style="display: flex; gap: 15px; align-items: center;">
+                                <input type="number" id="quickMinPrice" placeholder="Min" style="flex: 1;">
+                                <span>to</span>
+                                <input type="number" id="quickMaxPrice" placeholder="Max" style="flex: 1;">
+                                <button id="applyFilter" class="btn btn-small btn-primary">Apply</button>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label><i class="fas fa-search"></i> Search by Title</label>
+                            <input type="text" id="searchTitle" placeholder="Type course title...">
+                        </div>
+                    </div>
+                    <div>
+                        <h3 style="margin-bottom: 20px; color: var(--text);">
+                            <i class="fas fa-info-circle"></i> System Info
+                        </h3>
+                        <div style="background: var(--light); padding: 20px; border-radius: 10px;">
+                            <p><i class="fas fa-server"></i> <strong>Backend:</strong> Node.js + Express</p>
+                            <p><i class="fas fa-database"></i> <strong>Database:</strong> MongoDB</p>
+                            <p><i class="fas fa-code"></i> <strong>Frontend:</strong> Vanilla JS</p>
+                            <p><i class="fas fa-bolt"></i> <strong>Status:</strong> <span class="status-badge online">Online</span></p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div class="modal" id="deleteModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-exclamation-triangle"></i> Confirm Deletion</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 20px; font-size: 1.1rem;">
+                    <strong>Warning:</strong> This action cannot be undone. The course will be permanently deleted from the database.
+                </p>
+                <div class="course-preview" id="deletePreview">
+                    Loading course details...
+                </div>
+                <div style="margin-top: 20px; padding: 15px; background: rgba(239, 68, 68, 0.1); border-radius: 8px; border-left: 4px solid var(--danger);">
+                    <p style="margin: 0; color: var(--danger); font-size: 0.9rem;">
+                        <i class="fas fa-exclamation-circle"></i>
+                        All associated data will be lost. Please confirm you want to proceed.
+                    </p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelDelete">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button class="btn btn-danger" id="confirmDelete">
+                    <i class="fas fa-trash"></i> Delete Permanently
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="successModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-check-circle" style="color: var(--success);"></i> Success!</h3>
+                <button class="modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p id="successMessage" style="text-align: center; font-size: 1.2rem; padding: 20px;">
+                    Operation completed successfully!
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" id="closeSuccessModal">
+                    <i class="fas fa-check"></i> OK
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="admin-footer">
+        <p>
+            &copy; 2026 CourseMaster Admin Panel 
+            <span class="production-badge" id="envBadge">PRODUCTION</span>
+        </p>
+        <p class="api-status">
+            API Status: 
+            <span class="status-badge online" id="apiStatus">
+                <span class="loading"></span> Checking...
+            </span>
+        </p>
+        <p style="margin-top: 15px; opacity: 0.7; font-size: 0.9rem;">
+            Built with <i class="fas fa-heart" style="color: var(--secondary);"></i> for SE-2425 Course Project
+        </p>
+    </footer>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - CourseMaster</title>
+    <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+<div class="container" style="min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center;">
+    <div style="text-align: center; max-width: 600px;">
+        <h1 style="font-size: 8rem; color: var(--primary); margin-bottom: 20px;">404</h1>
+        <h2 style="font-size: 2.5rem; margin-bottom: 20px;">Page Not Found</h2>
+        <p style="font-size: 1.2rem; color: var(--text-light); margin-bottom: 40px;">
+            The page you're looking for doesn't exist or has been moved.
+        </p>
+        <div style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
+            <a href="/" class="btn btn-primary">
+                <i class="fas fa-home"></i> Go to Dashboard
+            </a>
+            <a href="/admin" class="btn btn-secondary">
+                <i class="fas fa-tachometer-alt"></i> Admin Panel
+            </a>
+            <a href="/api/courses" class="btn" style="background: var(--info); color: white;">
+                <i class="fas fa-code"></i> View API
+            </a>
+        </div>
+        <div style="margin-top: 50px; padding: 30px; background: var(--light); border-radius: var(--border-radius);">
+            <h3 style="margin-bottom: 15px; color: var(--text);">
+                <i class="fas fa-lightbulb"></i> Quick Links
+            </h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <a href="/api/courses" style="display: block; padding: 15px; background: white; border-radius: 8px; text-decoration: none; color: var(--text); border: 1px solid var(--border); transition: var(--transition);">
+                    <i class="fas fa-list"></i> All Courses (API)
+                </a>
+                <a href="/admin" style="display: block; padding: 15px; background: white; border-radius: 8px; text-decoration: none; color: var(--text); border: 1px solid var(--border); transition: var(--transition);">
+                    <i class="fas fa-cog"></i> Admin Dashboard
+                </a>
+                <a href="#" onclick="courseManager.showApiDocs()" style="display: block; padding: 15px; background: white; border-radius: 8px; text-decoration: none; color: var(--text); border: 1px solid var(--border); transition: var(--transition);">
+                    <i class="fas fa-book"></i> API Documentation
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="/app.js"></script>
+</body>
+</html>
