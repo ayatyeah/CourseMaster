@@ -31,12 +31,27 @@ async function connectToDb() {
     }
 }
 
+async function getNextSequence(name) {
+    const result = await db.collection('counters').findOneAndUpdate(
+        { _id: name },
+        { $inc: { seq: 1 } },
+        { returnDocument: 'after', upsert: true }
+    );
+    return result.seq;
+}
+
 async function initDatabase() {
     try {
         const collections = await db.listCollections().toArray();
-        console.log('Collections found:', collections.length);
 
         const hasCourses = collections.some(col => col.name === 'courses');
+        const hasCounters = collections.some(col => col.name === 'counters');
+
+        if (!hasCounters) {
+            await db.createCollection('counters');
+            await db.collection('counters').insertOne({ _id: 'courseId', seq: 1000 });
+            console.log('Created counters collection');
+        }
 
         if (!hasCourses) {
             await db.createCollection('courses');
@@ -44,6 +59,7 @@ async function initDatabase() {
 
             const sampleCourses = [
                 {
+                    id: 1,
                     title: "Full Stack Web Development",
                     price: 299.99,
                     description: "Learn Node.js, Express, React, MongoDB",
@@ -51,6 +67,7 @@ async function initDatabase() {
                     updatedAt: new Date()
                 },
                 {
+                    id: 2,
                     title: "Data Science Masterclass",
                     price: 399.99,
                     description: "Python, Pandas, NumPy, Machine Learning",
@@ -58,6 +75,7 @@ async function initDatabase() {
                     updatedAt: new Date()
                 },
                 {
+                    id: 3,
                     title: "Mobile App Development",
                     price: 249.99,
                     description: "Build iOS & Android apps with React Native",
@@ -84,4 +102,4 @@ function getDb() {
     return db;
 }
 
-module.exports = { connectToDb, getDb };
+module.exports = { connectToDb, getDb, getNextSequence };

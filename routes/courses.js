@@ -1,14 +1,38 @@
 const express = require('express');
+const { getDb, getNextSequence } = require('../database/db');
 const { ObjectId } = require('mongodb');
-const { getDb } = require('../database/db');
 
 const router = express.Router();
+
+const isObjectId = (v) => typeof v === 'string' && /^[a-f\d]{24}$/i.test(v);
+
+const normalizeCourse = (course) => {
+    if (!course) return course;
+    return {
+        ...course,
+        id: course.id ?? (course._id ? String(course._id) : course.id)
+    };
+};
+
+const buildCourseSelector = (rawId) => {
+    const str = String(rawId).trim();
+
+    if (/^\d+$/.test(str)) {
+        return { id: parseInt(str, 10) };
+    }
+
+    if (isObjectId(str)) {
+        return { _id: new ObjectId(str) };
+    }
+
+    return null;
+};
 
 router.get('/', async (req, res) => {
     try {
         const db = getDb();
         const { sort, minPrice, maxPrice, fields } = req.query;
-        
+
         let query = {};
         if (minPrice || maxPrice) {
             query.price = {};
@@ -33,7 +57,7 @@ router.get('/', async (req, res) => {
             .project(projection)
             .toArray();
 
-        res.status(200).json(courses);
+        res.status(200).json(courses.map(normalizeCourse));
     } catch (err) {
         console.error('GET / error:', err);
         res.status(500).json({ error: "Internal Server Error" });
@@ -43,16 +67,19 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
     try {
         const db = getDb();
-        if (!ObjectId.isValid(req.params.id)) {
+        const selector = buildCourseSelector(req.params.id);
+
+        if (!selector) {
             return res.status(400).json({ error: "Invalid ID format" });
         }
-        
-        const course = await db.collection('courses').findOne({ _id: new ObjectId(req.params.id) });
-        
+
+        const course = await db.collection('courses').findOne(selector);
+
         if (!course) {
             return res.status(404).json({ error: "Course not found" });
         }
-        res.status(200).json(course);
+
+        res.status(200).json(normalizeCourse(course));
     } catch (err) {
         console.error('GET /:id error:', err);
         res.status(500).json({ error: "Internal Server Error" });
@@ -64,21 +91,23 @@ router.post('/', async (req, res) => {
         const db = getDb();
         const { title, price, description } = req.body;
 
-        if (!title || !price) {
+        if (!title || price === undefined || price === null || price === '') {
             return res.status(400).json({ error: "Missing title or price" });
         }
 
+        const newId = await getNextSequence('courseId');
+
         const newCourse = {
-            title: title.trim(),
+            id: newId,
+            title: String(title).trim(),
             price: parseFloat(price),
-            description: description ? description.trim() : "",
+            description: description ? String(description).trim() : "",
             createdAt: new Date(),
             updatedAt: new Date()
         };
 
-        const result = await db.collection('courses').insertOne(newCourse);
-        newCourse._id = result.insertedId;
-        
+        await db.collection('courses').insertOne(newCourse);
+
         res.status(201).json(newCourse);
     } catch (err) {
         console.error('POST / error:', err);
@@ -90,23 +119,25 @@ router.put('/:id', async (req, res) => {
     try {
         const db = getDb();
         const { title, price, description } = req.body;
+        const selector = buildCourseSelector(req.params.id);
 
-        if (!ObjectId.isValid(req.params.id)) {
+        if (!selector) {
             return res.status(400).json({ error: "Invalid ID format" });
         }
-        if (!title || !price) {
+
+        if (!title || price === undefined || price === null || price === '') {
             return res.status(400).json({ error: "Missing required fields" });
         }
 
         const updates = {
-            title: title.trim(),
+            title: String(title).trim(),
             price: parseFloat(price),
-            description: description ? description.trim() : "",
+            description: description ? String(description).trim() : "",
             updatedAt: new Date()
         };
 
         const result = await db.collection('courses').updateOne(
-            { _id: new ObjectId(req.params.id) },
+            selector,
             { $set: updates }
         );
 
@@ -114,7 +145,8 @@ router.put('/:id', async (req, res) => {
             return res.status(404).json({ error: "Course not found" });
         }
 
-        res.status(200).json({ _id: req.params.id, ...updates });
+        const updated = await db.collection('courses').findOne(selector);
+        res.status(200).json(normalizeCourse(updated) || { ...updates, id: req.params.id });
     } catch (err) {
         console.error('PUT /:id error:', err);
         res.status(500).json({ error: "Internal Server Error" });
@@ -124,11 +156,13 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
     try {
         const db = getDb();
-        if (!ObjectId.isValid(req.params.id)) {
+        const selector = buildCourseSelector(req.params.id);
+
+        if (!selector) {
             return res.status(400).json({ error: "Invalid ID format" });
         }
 
-        const result = await db.collection('courses').deleteOne({ _id: new ObjectId(req.params.id) });
+        const result = await db.collection('courses').deleteOne(selector);
 
         if (result.deletedCount === 0) {
             return res.status(404).json({ error: "Course not found" });

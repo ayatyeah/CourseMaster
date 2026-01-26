@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - CourseMaster</title>
+    <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="login-page">
+<div class="login-container">
+    <div class="login-card">
+        <div class="login-header">
+            <i class="fas fa-graduation-cap"></i>
+            <h1>CourseMaster</h1>
+            <p>Admin Dashboard Login</p>
+        </div>
+
+        <form id="loginForm" class="login-form">
+            <div class="form-group">
+                <label for="username">
+                    <i class="fas fa-user"></i> Username
+                </label>
+                <input type="text" id="username" placeholder="Enter username" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">
+                    <i class="fas fa-lock"></i> Password
+                </label>
+                <input type="password" id="password" placeholder="Enter password" required>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-sign-in-alt"></i> Login
+                </button>
+            </div>
+
+            <div class="login-hint">
+                <p><strong>Test credentials:</strong></p>
+                <p>Admin: <code>admin / admin123</code></p>
+                <p>User: <code>user / user123</code></p>
+            </div>
+        </form>
+
+        <div class="login-footer">
+            <p>&copy; 2025 CourseMaster Project</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    async function checkIfAlreadyLoggedIn() {
+        try {
+            const response = await fetch('/api/auth/check');
+            const data = await response.json();
+
+            if (data.loggedIn) {
+                window.location.href = '/';
+            }
+        } catch (error) {
+            console.log('Not logged in, showing login form');
+        }
+    }
+
+    document.getElementById('loginForm').onsubmit = async (e) => {
+        e.preventDefault();
+
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
+        submitBtn.disabled = true;
+
+        try {
+            const response = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || 'Login failed');
+            }
+
+            window.location.href = '/';
+
+        } catch (error) {
+            alert('Login failed: ' + error.message);
+            submitBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login';
+            submitBtn.disabled = false;
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', checkIfAlreadyLoggedIn);
+    document.getElementById('username').focus();
+</script>
+</body>
+</html>
