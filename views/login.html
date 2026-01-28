@@ -51,18 +51,6 @@
 </div>
 
 <script>
-    async function checkAuth() {
-        try {
-            const res = await fetch("/api/auth/check", { credentials: "include" });
-            if (res.ok) {
-                const data = await res.json();
-                if (data.loggedIn) {
-                    window.location.href = "/";
-                }
-            }
-        } catch {}
-    }
-
     document.getElementById("loginForm").addEventListener("submit", async (e) => {
         e.preventDefault();
 
@@ -77,34 +65,29 @@
             const res = await fetch("/api/auth/login", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                credentials: "include",
                 body: JSON.stringify({ username, password })
             });
 
             const data = await res.json();
 
             if (!res.ok) {
-                if (res.status === 401) {
-                    throw new Error("Invalid username or password");
-                }
-                if (res.status === 500) {
-                    throw new Error("Server error. Please try again later.");
-                }
                 throw new Error(data.error || "Login failed");
             }
+
+            console.log("Login successful, redirecting...");
 
             setTimeout(() => {
                 window.location.href = "/";
             }, 100);
+
         } catch (err) {
-            alert("Login Error: " + err.message);
+            alert(err.message);
             btn.disabled = false;
             btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login';
         }
     });
 
     document.addEventListener("DOMContentLoaded", () => {
-        checkAuth();
         document.getElementById("username").focus();
     });
 </script>
