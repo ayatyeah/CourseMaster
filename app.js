@@ -1,6 +1,8 @@
 const express = require('express');
 const session = require('express-session');
+const cors = require('cors');
 const path = require('path');
+const MongoStore = require('connect-mongo');
 const { connectToDb } = require('./database/db');
 const coursesRoutes = require('./routes/courses');
 const authRoutes = require('./routes/auth');
@@ -8,15 +10,31 @@ const authRoutes = require('./routes/auth');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+app.use(cors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    credentials: true
+}));
+
 app.use(session({
-    secret: 'coursemaster-secret-key-12345',
+    secret: process.env.SESSION_SECRET || 'coursemaster-secret-key-12345',
     resave: false,
-    saveUninitialized: true,
+    saveUninitialized: false,
+    store: MongoStore.create({
+        mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/coursemaster_db',
+        collectionName: 'sessions'
+    }),
     cookie: {
         secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+        sameSite: 'lax',
         maxAge: 24 * 60 * 60 * 1000
     }
 }));
+
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Credentials', 'true');
+    next();
+});
 
 app.use(express.static('public'));
 app.use(express.urlencoded({ extended: true }));
@@ -24,17 +42,7 @@ app.use(express.json());
 
 const requireAuth = (req, res, next) => {
     if (!req.session.userId) {
-        if (req.xhr || req.headers.accept.indexOf('json') > -1) {
-            return res.status(401).json({ error: 'Unauthorized' });
-        }
         return res.redirect('/login.html');
-    }
-    next();
-};
-
-const requireAdmin = (req, res, next) => {
-    if (!req.session.userId || req.session.role !== 'admin') {
-        return res.status(403).send('Admin access required');
     }
     next();
 };
@@ -45,7 +53,7 @@ app.use((req, res, next) => {
 });
 
 app.use('/api/auth', authRoutes);
-app.use('/api/courses', requireAuth, coursesRoutes);
+app.use('/api/courses', coursesRoutes);
 
 app.get('/login.html', (req, res) => {
     if (req.session.userId) {
@@ -54,20 +62,8 @@ app.get('/login.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'views', 'login.html'));
 });
 
-app.get('/contact', (req, res) => {
-    res.sendFile(path.join(__dirname, 'views', 'contact.html'));
-});
-
-app.get('/about', (req, res) => {
-    res.sendFile(path.join(__dirname, 'views', 'about.html'));
-});
-
 app.get('/', requireAuth, (req, res) => {
     res.sendFile(path.join(__dirname, 'views', 'index.html'));
-});
-
-app.get('/admin', requireAdmin, (req, res) => {
-    res.sendFile(path.join(__dirname, 'views', 'admin.html'));
 });
 
 app.get('/api/me', requireAuth, (req, res) => {
@@ -78,46 +74,13 @@ app.get('/api/me', requireAuth, (req, res) => {
     });
 });
 
-app.get('/health', async (req, res) => {
-    try {
-        const { getDb } = require('./database/db');
-        const db = getDb();
-        await db.command({ ping: 1 });
-        res.json({
-            status: 'healthy',
-            database: 'connected',
-            timestamp: new Date().toISOString(),
-            environment: process.env.NODE_ENV || 'development'
-        });
-    } catch (err) {
-        res.status(500).json({
-            status: 'unhealthy',
-            database: 'disconnected',
-            error: err.message,
-            timestamp: new Date().toISOString()
-        });
-    }
-});
-
-app.use((req, res) => {
-    if (req.url.startsWith('/api')) {
-        res.status(404).json({ error: "API endpoint not found" });
-    } else {
-        res.status(404).sendFile(path.join(__dirname, 'views', '404.html'));
-    }
-});
-
 connectToDb().then(() => {
     app.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);
         console.log(`Login: http://localhost:${PORT}/login.html`);
-        console.log(`Admin Dashboard: http://localhost:${PORT}/admin`);
         console.log(`API Base URL: http://localhost:${PORT}/api/courses`);
-        console.log(`Health Check: http://localhost:${PORT}/health`);
     });
 }).catch(err => {
     console.error('Database connection failed:', err.message);
-    app.listen(PORT, () => {
-        console.log(`Server running (NO DATABASE) on port ${PORT}`);
-    });
+    process.exit(1);
 });

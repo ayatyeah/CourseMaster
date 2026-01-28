@@ -1,33 +1,31 @@
 const { MongoClient } = require('mongodb');
 
 const url = process.env.MONGODB_URI || 'mongodb://localhost:27017';
-const client = new MongoClient(url);
+const client = new MongoClient(url, {
+    serverSelectionTimeoutMS: 5000,
+    connectTimeoutMS: 10000,
+    socketTimeoutMS: 45000,
+});
 
 const dbName = process.env.DB_NAME || 'coursemaster_db';
 let db;
 
 async function connectToDb() {
     try {
-        console.log('Connecting to MongoDB Atlas...');
-        console.log('URL:', process.env.MONGODB_URI ? 'Set' : 'Not set');
+        console.log('Connecting to MongoDB...');
 
         await client.connect();
         db = client.db(dbName);
 
         await db.command({ ping: 1 });
-        console.log('Connected to MongoDB Atlas successfully!');
+        console.log('Connected to MongoDB successfully!');
         console.log('Database:', dbName);
 
         await initDatabase();
 
     } catch (err) {
         console.error('MongoDB connection failed:', err.message);
-        if (err.message.includes('Authentication failed')) {
-            console.error('Check username/password in MONGODB_URI');
-        }
-        if (err.message.includes('ENOTFOUND')) {
-            console.error('Check network connection and hostname');
-        }
+        setTimeout(connectToDb, 5000);
     }
 }
 

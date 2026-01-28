@@ -4,53 +4,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CourseMaster – Admin Dashboard</title>
-
     <link rel="stylesheet" href="/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="icon" type="image/x-icon"
-          href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎓</text></svg>">
 </head>
 <body>
-
 <div class="container">
-
-    <!-- NAVBAR -->
     <nav class="navbar glass">
         <span class="nav-logo">
             <i class="fas fa-graduation-cap"></i>
             CourseMaster
             <span class="badge">ADMIN</span>
         </span>
-
         <div class="nav-links">
-            <span id="userInfo" style="color: var(--text-light); margin-right: 20px;">
+            <span id="userInfo" style="color: #666; margin-right: 20px;">
                 <i class="fas fa-user-circle"></i> Loading...
             </span>
-
-            <a href="/" class="active">
-                <i class="fas fa-tachometer-alt"></i> Dashboard
-            </a>
-
-            <a href="/admin" id="adminBtn">
-                <i class="fas fa-cog"></i> Admin
-            </a>
-
-            <a href="#" id="apiDocsBtn">
-                <i class="fas fa-code"></i> API Docs
-            </a>
-
-            <a href="#" id="logoutBtn">
-                <i class="fas fa-sign-out-alt"></i> Logout
-            </a>
+            <a href="/" class="active"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+            <a href="/admin" id="adminBtn"><i class="fas fa-cog"></i> Admin</a>
+            <a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</a>
         </div>
     </nav>
 
-    <!-- HEADER -->
     <header class="admin-header">
         <div class="admin-header-content">
             <h1 class="logo">🎓 CourseMaster Dashboard</h1>
             <p class="tagline">Complete CRUD Management System for Online Courses</p>
-
             <div class="stats">
                 <div class="stat-card">
                     <i class="fas fa-book-open"></i>
@@ -63,11 +41,6 @@
                     <span class="stat-label">Average Price</span>
                 </div>
                 <div class="stat-card">
-                    <i class="fas fa-clock"></i>
-                    <span class="stat-count" id="latestUpdate">—</span>
-                    <span class="stat-label">Last Updated</span>
-                </div>
-                <div class="stat-card">
                     <i class="fas fa-database"></i>
                     <span class="stat-count" id="totalValue">$0</span>
                     <span class="stat-label">Total Value</span>
@@ -76,15 +49,11 @@
         </div>
     </header>
 
-    <!-- MAIN -->
     <main class="dashboard">
-
-        <!-- CREATE COURSE -->
         <div class="crud-section glass">
             <div class="section-header">
                 <h2><i class="fas fa-plus-circle"></i> Create New Course</h2>
             </div>
-
             <div class="form-card">
                 <form id="createForm">
                     <div class="form-row">
@@ -97,12 +66,10 @@
                             <input type="number" id="price" step="0.01" min="0" required>
                         </div>
                     </div>
-
                     <div class="form-group">
                         <label for="description"><i class="fas fa-align-left"></i> Description</label>
                         <textarea id="description" rows="4"></textarea>
                     </div>
-
                     <div class="form-actions">
                         <button type="submit" class="btn btn-primary">
                             <i class="fas fa-save"></i> Create Course
@@ -115,27 +82,22 @@
             </div>
         </div>
 
-        <!-- UPDATE COURSE -->
         <div class="crud-section glass">
             <div class="section-header">
                 <h2><i class="fas fa-edit"></i> Update Course</h2>
             </div>
-
             <div class="form-card">
                 <div class="form-group">
                     <label for="searchCourse"><i class="fas fa-search"></i> Search Course by ID</label>
                     <div style="display:flex; gap:10px;">
-                        <input type="text" id="searchCourse"
-                               placeholder="Numeric ID or Mongo ObjectId">
+                        <input type="text" id="searchCourse" placeholder="Numeric ID or Mongo ObjectId">
                         <button id="searchBtn" class="btn btn-small btn-primary">
                             <i class="fas fa-search"></i> Search
                         </button>
                     </div>
                 </div>
-
                 <form id="updateForm" style="display:none; margin-top:20px;">
                     <input type="hidden" id="updateId">
-
                     <div class="form-row">
                         <div class="form-group">
                             <label for="updateTitle">Title *</label>
@@ -146,12 +108,10 @@
                             <input type="number" id="updatePrice" step="0.01" required>
                         </div>
                     </div>
-
                     <div class="form-group">
                         <label for="updateDescription">Description</label>
                         <textarea id="updateDescription" rows="4"></textarea>
                     </div>
-
                     <div class="form-actions">
                         <button type="submit" class="btn btn-warning">
                             <i class="fas fa-sync-alt"></i> Update
@@ -164,11 +124,9 @@
             </div>
         </div>
 
-        <!-- COURSES TABLE -->
         <div class="courses-section glass">
             <div class="section-header">
                 <h2><i class="fas fa-list-alt"></i> All Courses</h2>
-
                 <div class="section-actions">
                     <div class="filter-options">
                         <select id="sortFilter">
@@ -178,21 +136,17 @@
                             <option value="createdAt:desc">Newest</option>
                             <option value="createdAt:asc">Oldest</option>
                         </select>
-
                         <input type="number" id="minPriceFilter" placeholder="Min $">
                         <input type="number" id="maxPriceFilter" placeholder="Max $">
                     </div>
-
                     <button id="refreshBtn" class="btn btn-small btn-primary">
                         <i class="fas fa-redo"></i> Refresh
                     </button>
-
                     <button id="exportBtn" class="btn btn-small btn-secondary">
                         <i class="fas fa-download"></i> Export
                     </button>
                 </div>
             </div>
-
             <div class="table-container">
                 <table class="courses-table">
                     <thead>
@@ -205,7 +159,6 @@
                         <th width="140">ACTIONS</th>
                     </tr>
                     </thead>
-
                     <tbody id="coursesTableBody">
                     <tr>
                         <td colspan="6" class="empty-state">
@@ -217,39 +170,11 @@
                 </table>
             </div>
         </div>
-
-        <!-- SYSTEM INFO -->
-        <div class="crud-section glass">
-            <div class="section-header">
-                <h2><i class="fas fa-info-circle"></i> System Info</h2>
-            </div>
-
-            <div class="form-card">
-                <p><strong>Backend:</strong> Node.js + Express</p>
-                <p><strong>Database:</strong> MongoDB</p>
-                <p><strong>Frontend:</strong> Vanilla JS</p>
-
-                <span class="status-badge online" id="apiStatus">Online</span>
-            </div>
-        </div>
-
     </main>
 
-    <!-- FOOTER -->
     <footer class="admin-footer">
-        <p>
-            © 2026 CourseMaster
-            <span class="production-badge" id="envBadge">PRODUCTION</span>
-        </p>
-
-        <p class="api-status">
-            API Status:
-            <span class="status-badge online" id="apiStatusFooter">
-                <span class="loading"></span> Checking...
-            </span>
-        </p>
+        <p>© 2026 CourseMaster <span class="production-badge" id="envBadge">PRODUCTION</span></p>
     </footer>
-
 </div>
 
 <script src="/app.js"></script>

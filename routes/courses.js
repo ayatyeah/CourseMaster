@@ -4,6 +4,13 @@ const { ObjectId } = require('mongodb');
 
 const router = express.Router();
 
+const requireAdmin = (req, res, next) => {
+    if (!req.session.role || req.session.role !== 'admin') {
+        return res.status(403).json({ error: "Admin access required" });
+    }
+    next();
+};
+
 const isObjectId = (v) => typeof v === 'string' && /^[a-f\d]{24}$/i.test(v);
 
 const normalizeCourse = (course) => {
@@ -31,7 +38,7 @@ const buildCourseSelector = (rawId) => {
 router.get('/', async (req, res) => {
     try {
         const db = getDb();
-        const { sort, minPrice, maxPrice, fields } = req.query;
+        const { sort, minPrice, maxPrice } = req.query;
 
         let query = {};
         if (minPrice || maxPrice) {
@@ -46,15 +53,9 @@ router.get('/', async (req, res) => {
             sortOption[parts[0]] = parts[1] === 'desc' ? -1 : 1;
         }
 
-        let projection = {};
-        if (fields) {
-            fields.split(',').forEach(field => projection[field] = 1);
-        }
-
         const courses = await db.collection('courses')
             .find(query)
             .sort(sortOption)
-            .project(projection)
             .toArray();
 
         res.status(200).json(courses.map(normalizeCourse));
@@ -146,14 +147,14 @@ router.put('/:id', async (req, res) => {
         }
 
         const updated = await db.collection('courses').findOne(selector);
-        res.status(200).json(normalizeCourse(updated) || { ...updates, id: req.params.id });
+        res.status(200).json(normalizeCourse(updated));
     } catch (err) {
         console.error('PUT /:id error:', err);
         res.status(500).json({ error: "Internal Server Error" });
     }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requireAdmin, async (req, res) => {
     try {
         const db = getDb();
         const selector = buildCourseSelector(req.params.id);

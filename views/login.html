@@ -84,12 +84,20 @@
             const data = await res.json();
 
             if (!res.ok) {
+                if (res.status === 401) {
+                    throw new Error("Invalid username or password");
+                }
+                if (res.status === 500) {
+                    throw new Error("Server error. Please try again later.");
+                }
                 throw new Error(data.error || "Login failed");
             }
 
-            window.location.href = "/";
+            setTimeout(() => {
+                window.location.href = "/";
+            }, 100);
         } catch (err) {
-            alert(err.message);
+            alert("Login Error: " + err.message);
             btn.disabled = false;
             btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login';
         }
