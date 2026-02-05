@@ -3,24 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CourseMaster – Admin Dashboard</title>
+    <title>CourseMaster – Dashboard</title>
     <link rel="stylesheet" href="/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body>
 <div class="container">
     <nav class="navbar glass">
-        <span class="nav-logo">
-            <i class="fas fa-graduation-cap"></i>
-            CourseMaster
-            <span class="badge">ADMIN</span>
-        </span>
+    <span class="nav-logo">
+      <i class="fas fa-graduation-cap"></i>
+      CourseMaster
+    </span>
         <div class="nav-links">
-            <span id="userInfo" style="color: #666; margin-right: 20px;">
-                <i class="fas fa-user-circle"></i> Loading...
-            </span>
+      <span id="userInfo" style="color: #666; margin-right: 20px;">
+        <i class="fas fa-user-circle"></i> Loading...
+      </span>
             <a href="/" class="active"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
-            <a href="/admin" id="adminBtn"><i class="fas fa-cog"></i> Admin</a>
             <a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</a>
         </div>
     </nav>
@@ -58,25 +56,46 @@
                 <form id="createForm">
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="title"><i class="fas fa-heading"></i> Course Title *</label>
+                            <label for="title">Title *</label>
                             <input type="text" id="title" required>
                         </div>
                         <div class="form-group">
-                            <label for="price"><i class="fas fa-dollar-sign"></i> Price ($) *</label>
+                            <label for="price">Price ($) *</label>
                             <input type="number" id="price" step="0.01" min="0" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="instructor">Instructor *</label>
+                            <input type="text" id="instructor" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="category">Category *</label>
+                            <input type="text" id="category" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="level">Level</label>
+                            <select id="level">
+                                <option value="Beginner">Beginner</option>
+                                <option value="Intermediate">Intermediate</option>
+                                <option value="Advanced">Advanced</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="duration">Duration</label>
+                            <input type="text" id="duration" placeholder="e.g. 10 hours">
+                        </div>
+                        <div class="form-group">
+                            <label for="language">Language</label>
+                            <input type="text" id="language" value="English">
                         </div>
                     </div>
                     <div class="form-group">
-                        <label for="description"><i class="fas fa-align-left"></i> Description</label>
-                        <textarea id="description" rows="4"></textarea>
+                        <label for="description">Description</label>
+                        <textarea id="description" rows="3"></textarea>
                     </div>
                     <div class="form-actions">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-save"></i> Create Course
-                        </button>
-                        <button type="reset" class="btn btn-secondary">
-                            <i class="fas fa-undo"></i> Clear
-                        </button>
+                        <button type="submit" class="btn btn-primary">Create Course</button>
                     </div>
                 </form>
             </div>
@@ -91,9 +110,7 @@
                     <label for="searchCourse"><i class="fas fa-search"></i> Search Course by ID</label>
                     <div style="display:flex; gap:10px;">
                         <input type="text" id="searchCourse" placeholder="Numeric ID or Mongo ObjectId">
-                        <button id="searchBtn" class="btn btn-small btn-primary">
-                            <i class="fas fa-search"></i> Search
-                        </button>
+                        <button id="searchBtn" class="btn btn-small btn-primary">Search</button>
                     </div>
                 </div>
                 <form id="updateForm" style="display:none; margin-top:20px;">
@@ -107,18 +124,40 @@
                             <label for="updatePrice">Price *</label>
                             <input type="number" id="updatePrice" step="0.01" required>
                         </div>
+                        <div class="form-group">
+                            <label for="updateInstructor">Instructor</label>
+                            <input type="text" id="updateInstructor">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="updateCategory">Category</label>
+                            <input type="text" id="updateCategory">
+                        </div>
+                        <div class="form-group">
+                            <label for="updateLevel">Level</label>
+                            <select id="updateLevel">
+                                <option value="Beginner">Beginner</option>
+                                <option value="Intermediate">Intermediate</option>
+                                <option value="Advanced">Advanced</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="updateDuration">Duration</label>
+                            <input type="text" id="updateDuration">
+                        </div>
+                        <div class="form-group">
+                            <label for="updateLanguage">Language</label>
+                            <input type="text" id="updateLanguage">
+                        </div>
                     </div>
                     <div class="form-group">
                         <label for="updateDescription">Description</label>
-                        <textarea id="updateDescription" rows="4"></textarea>
+                        <textarea id="updateDescription" rows="3"></textarea>
                     </div>
                     <div class="form-actions">
-                        <button type="submit" class="btn btn-warning">
-                            <i class="fas fa-sync-alt"></i> Update
-                        </button>
-                        <button type="button" id="cancelUpdate" class="btn btn-secondary">
-                            Cancel
-                        </button>
+                        <button type="submit" class="btn btn-warning">Update</button>
+                        <button type="button" id="cancelUpdate" class="btn btn-secondary">Cancel</button>
                     </div>
                 </form>
             </div>
@@ -134,49 +173,38 @@
                             <option value="price:asc">Price ↑</option>
                             <option value="price:desc">Price ↓</option>
                             <option value="createdAt:desc">Newest</option>
-                            <option value="createdAt:asc">Oldest</option>
                         </select>
-                        <input type="number" id="minPriceFilter" placeholder="Min $">
-                        <input type="number" id="maxPriceFilter" placeholder="Max $">
+                        <input type="number" id="minPriceFilter" placeholder="Min $" style="width: 80px;">
+                        <input type="number" id="maxPriceFilter" placeholder="Max $" style="width: 80px;">
                     </div>
-                    <button id="refreshBtn" class="btn btn-small btn-primary">
-                        <i class="fas fa-redo"></i> Refresh
-                    </button>
-                    <button id="exportBtn" class="btn btn-small btn-secondary">
-                        <i class="fas fa-download"></i> Export
-                    </button>
+                    <button id="refreshBtn" class="btn btn-small btn-primary"><i class="fas fa-redo"></i></button>
+                    <button id="exportBtn" class="btn btn-small btn-secondary"><i class="fas fa-download"></i></button>
                 </div>
             </div>
             <div class="table-container">
                 <table class="courses-table">
                     <thead>
                     <tr>
-                        <th width="260">ID</th>
-                        <th width="260">TITLE</th>
-                        <th>DESCRIPTION</th>
-                        <th width="120">PRICE</th>
-                        <th width="160">CREATED</th>
-                        <th width="140">ACTIONS</th>
+                        <th>ID</th>
+                        <th>TITLE</th>
+                        <th>INSTRUCTOR</th>
+                        <th>CATEGORY</th>
+                        <th>LEVEL</th>
+                        <th>PRICE</th>
+                        <th>DATE</th>
+                        <th>ACTIONS</th>
                     </tr>
                     </thead>
-                    <tbody id="coursesTableBody">
-                    <tr>
-                        <td colspan="6" class="empty-state">
-                            <i class="fas fa-spinner fa-spin"></i>
-                            <p>Loading courses...</p>
-                        </td>
-                    </tr>
-                    </tbody>
+                    <tbody id="coursesTableBody"></tbody>
                 </table>
             </div>
         </div>
     </main>
 
     <footer class="admin-footer">
-        <p>© 2026 CourseMaster <span class="production-badge" id="envBadge">PRODUCTION</span></p>
+        <p>© 2026 CourseMaster</p>
     </footer>
 </div>
-
 <script src="/app.js"></script>
 </body>
 </html>

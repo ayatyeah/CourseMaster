@@ -2,13 +2,13 @@ class CourseManager {
     constructor() {
         this.API_URL = window.location.origin + '/api/courses';
         this.currentCourses = [];
+        this.currentUser = null;
         this.init();
     }
 
     init() {
         this.bindEvents();
-        this.fetchCourses();
-        this.updateUserInfo();
+        this.updateUserInfo().then(() => this.fetchCourses());
     }
 
     bindEvents() {
@@ -31,11 +31,19 @@ class CourseManager {
         const sortFilter = document.getElementById('sortFilter');
         if (sortFilter) sortFilter.onchange = () => this.fetchCourses();
 
+        const min = document.getElementById('minPriceFilter');
+        const max = document.getElementById('maxPriceFilter');
+        if (min) min.onchange = () => this.fetchCourses();
+        if (max) max.onchange = () => this.fetchCourses();
+
         const exportBtn = document.getElementById('exportBtn');
         if (exportBtn) exportBtn.onclick = () => this.exportCourses();
 
         const logoutBtn = document.getElementById('logoutBtn');
-        if (logoutBtn) logoutBtn.onclick = () => this.handleLogout();
+        if (logoutBtn) logoutBtn.onclick = (e) => {
+            e.preventDefault();
+            this.handleLogout();
+        };
     }
 
     async fetchCourses() {
@@ -48,17 +56,14 @@ class CourseManager {
             let url = this.API_URL;
             const params = [];
 
-            if (sort) params.push(`sort=${sort}`);
-            if (minPrice) params.push(`minPrice=${minPrice}`);
-            if (maxPrice) params.push(`maxPrice=${maxPrice}`);
+            if (sort) params.push(`sort=${encodeURIComponent(sort)}`);
+            if (minPrice) params.push(`minPrice=${encodeURIComponent(minPrice)}`);
+            if (maxPrice) params.push(`maxPrice=${encodeURIComponent(maxPrice)}`);
 
             if (params.length) url += `?${params.join('&')}`;
 
             const response = await fetch(url, { credentials: 'include' });
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
             const courses = await response.json();
             this.currentCourses = courses;
@@ -67,14 +72,7 @@ class CourseManager {
             this.renderCoursesTable(courses);
         } catch (error) {
             console.error('Fetch error:', error);
-            if (tbody) tbody.innerHTML = `
-                <tr>
-                    <td colspan="6" class="empty-state">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        <p>Error loading courses</p>
-                    </td>
-                </tr>
-            `;
+            if (tbody) tbody.innerHTML = `<tr><td colspan="8">Error loading courses</td></tr>`;
         }
     }
 
@@ -103,259 +101,197 @@ class CourseManager {
         if (!tbody) return;
 
         if (!courses.length) {
-            tbody.innerHTML = `
-            <tr>
-                <td colspan="6" class="empty-state">
-                    <i class="fas fa-book"></i>
-                    <p>No courses found</p>
-                </td>
-            </tr>
-        `;
+            tbody.innerHTML = `<tr><td colspan="8">No courses found</td></tr>`;
             return;
         }
+
+        const isAdmin = this.currentUser && this.currentUser.role === 'admin';
+        const isLoggedIn = !!this.currentUser;
 
         tbody.innerHTML = courses.map(course => {
             const cid = course.id || course._id || '';
             const price = Number(course.price || 0);
+            const date = course.createdAt ? new Date(course.createdAt).toLocaleDateString() : '-';
+
+            let actions = '';
+            if (isLoggedIn) {
+                actions += `<button class="btn-action" onclick="courseManager.loadCourseForEdit('${String(cid).replace(/'/g, "\\'")}')"><i class="fas fa-edit"></i></button>`;
+                if (isAdmin) {
+                    const safeTitle = String(course.title || '').replace(/'/g, "\\'");
+                    actions += `<button class="btn-action" onclick="deleteCourse('${String(cid).replace(/'/g, "\\'")}', '${safeTitle}')"><i class="fas fa-trash"></i></button>`;
+                }
+            } else {
+                actions = '<span style="font-size:0.8em; color:#999;">Read Only</span>';
+            }
 
             return `
-            <tr>
-                <td class="course-id">${cid}</td>
-                <td class="course-title"><strong>${course.title || ''}</strong></td>
-                <td class="course-desc">${course.description || ''}</td>
-                <td class="course-price">$${price.toFixed(2)}</td>
-                <td class="course-date">${new Date(course.createdAt).toLocaleDateString()}</td>
-                <td class="course-actions">
-                    <button class="btn-action edit-btn" onclick="courseManager.loadCourseForEdit('${cid}')" title="Edit">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn-action delete-btn" onclick="deleteCourse('${cid}', '${course.title || ''}')" title="Delete">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </td>
-            </tr>
-        `;
+        <tr>
+          <td>${cid}</td>
+          <td><strong>${course.title || ''}</strong></td>
+          <td>${course.instructor || '-'}</td>
+          <td>${course.category || '-'}</td>
+          <td>${course.level || '-'}</td>
+          <td>$${price.toFixed(2)}</td>
+          <td>${date}</td>
+          <td>${actions}</td>
+        </tr>
+      `;
         }).join('');
     }
 
     async handleCreate(e) {
         e.preventDefault();
 
-        const title = document.getElementById('title')?.value.trim() || '';
-        const priceRaw = document.getElementById('price')?.value || '';
-        const description = document.getElementById('description')?.value.trim() || '';
-
-        if (!title || !priceRaw) {
-            alert('Please fill in all required fields');
-            return;
-        }
-
-        const createBtn = e.target.querySelector('button[type="submit"]');
-        const originalText = createBtn ? createBtn.innerHTML : '';
+        const data = {
+            title: document.getElementById('title').value.trim(),
+            price: document.getElementById('price').value,
+            instructor: document.getElementById('instructor').value.trim(),
+            category: document.getElementById('category').value.trim(),
+            level: document.getElementById('level').value,
+            duration: document.getElementById('duration').value.trim(),
+            language: document.getElementById('language').value.trim(),
+            description: document.getElementById('description').value.trim()
+        };
 
         try {
-            if (createBtn) {
-                createBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
-                createBtn.disabled = true;
-            }
-
             const response = await fetch(this.API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({ title, price: Number(priceRaw), description })
+                body: JSON.stringify(data)
             });
 
             if (!response.ok) {
-                const err = await response.json();
-                throw new Error(err.error || 'Failed to create course');
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err.error || 'Failed to create');
             }
 
-            const newCourse = await response.json();
-
-            alert(`Course "${newCourse.title}" created successfully!`);
-            document.getElementById('createForm')?.reset();
+            alert('Created successfully!');
+            document.getElementById('createForm').reset();
             this.fetchCourses();
         } catch (error) {
-            alert(`Error: ${error.message}`);
-        } finally {
-            if (createBtn) {
-                createBtn.innerHTML = originalText || '<i class="fas fa-save"></i> Create Course';
-                createBtn.disabled = false;
-            }
+            alert(error.message);
         }
     }
 
     async handleSearch() {
-        const id = document.getElementById('searchCourse')?.value.trim() || '';
-        if (!id) {
-            alert('Please enter a course ID');
-            return;
-        }
-        await this.loadCourseForEdit(id);
+        const id = document.getElementById('searchCourse')?.value.trim();
+        if (id) await this.loadCourseForEdit(id);
     }
 
     async loadCourseForEdit(id) {
         try {
-            const response = await fetch(`${this.API_URL}/${id}`, { credentials: 'include' });
-
-            if (!response.ok) {
-                const err = await response.json();
-                throw new Error(err.error || 'Course not found');
-            }
+            const response = await fetch(`${this.API_URL}/${encodeURIComponent(id)}`, { credentials: 'include' });
+            if (!response.ok) throw new Error('Not found');
 
             const course = await response.json();
-
             const cid = course.id || course._id || id;
 
             document.getElementById('updateId').value = cid;
             document.getElementById('updateTitle').value = course.title || '';
             document.getElementById('updatePrice').value = course.price ?? '';
+            document.getElementById('updateInstructor').value = course.instructor || '';
+            document.getElementById('updateCategory').value = course.category || '';
+            document.getElementById('updateLevel').value = course.level || 'Beginner';
+            document.getElementById('updateDuration').value = course.duration || '';
+            document.getElementById('updateLanguage').value = course.language || '';
             document.getElementById('updateDescription').value = course.description || '';
 
             document.getElementById('updateForm').style.display = 'block';
-            document.getElementById('searchCourse').value = '';
-            document.getElementById('updateTitle').focus();
-
-            alert(`Course "${course.title}" loaded for editing`);
+            const search = document.getElementById('searchCourse');
+            if (search) search.value = '';
         } catch (error) {
-            alert(`Error: ${error.message}`);
+            alert(error.message);
         }
     }
 
     hideUpdateForm() {
-        const updateForm = document.getElementById('updateForm');
-        if (updateForm) updateForm.style.display = 'none';
+        document.getElementById('updateForm').style.display = 'none';
     }
 
     async handleUpdate(e) {
         e.preventDefault();
 
-        const id = document.getElementById('updateId')?.value || '';
-        const title = document.getElementById('updateTitle')?.value.trim() || '';
-        const priceRaw = document.getElementById('updatePrice')?.value || '';
-        const description = document.getElementById('updateDescription')?.value.trim() || '';
+        const id = document.getElementById('updateId').value;
 
-        if (!title || !priceRaw) {
-            alert('Please fill in all required fields');
-            return;
-        }
-
-        const updateBtn = e.target.querySelector('button[type="submit"]');
-        const originalText = updateBtn ? updateBtn.innerHTML : '';
+        const data = {
+            title: document.getElementById('updateTitle').value.trim(),
+            price: document.getElementById('updatePrice').value,
+            instructor: document.getElementById('updateInstructor').value.trim(),
+            category: document.getElementById('updateCategory').value.trim(),
+            level: document.getElementById('updateLevel').value,
+            duration: document.getElementById('updateDuration').value.trim(),
+            language: document.getElementById('updateLanguage').value.trim(),
+            description: document.getElementById('updateDescription').value.trim()
+        };
 
         try {
-            if (updateBtn) {
-                updateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Updating...';
-                updateBtn.disabled = true;
-            }
-
-            const response = await fetch(`${this.API_URL}/${id}`, {
+            const response = await fetch(`${this.API_URL}/${encodeURIComponent(id)}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({ title, price: Number(priceRaw), description })
+                body: JSON.stringify(data)
             });
 
             if (!response.ok) {
-                const err = await response.json();
-                throw new Error(err.error || 'Failed to update course');
+                const err = await response.json().catch(() => ({}));
+                throw new Error(err.error || 'Failed to update');
             }
 
-            const updatedCourse = await response.json();
-
-            alert(`Course "${updatedCourse.title}" updated successfully!`);
+            alert('Updated successfully!');
             this.hideUpdateForm();
             this.fetchCourses();
         } catch (error) {
-            alert(`Error: ${error.message}`);
-        } finally {
-            if (updateBtn) {
-                updateBtn.innerHTML = originalText || '<i class="fas fa-sync-alt"></i> Update Course';
-                updateBtn.disabled = false;
-            }
+            alert(error.message);
         }
     }
 
     exportCourses() {
         const dataStr = JSON.stringify(this.currentCourses, null, 2);
         const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
-
-        const exportFileDefaultName = `courses_export_${new Date().toISOString().split('T')[0]}.json`;
-
         const linkElement = document.createElement('a');
         linkElement.setAttribute('href', dataUri);
-        linkElement.setAttribute('download', exportFileDefaultName);
+        linkElement.setAttribute('download', 'courses.json');
         linkElement.click();
-
-        alert(`Exported ${this.currentCourses.length} courses`);
     }
 
     async updateUserInfo() {
         try {
             const response = await fetch('/api/me', { credentials: 'include' });
-            if (!response.ok) return;
-
-            const user = await response.json();
             const userInfo = document.getElementById('userInfo');
-            if (userInfo) {
-                userInfo.innerHTML = `<i class="fas fa-user-circle"></i> ${user.username} (${user.role})`;
-            }
 
-            if (user.role !== 'admin') {
-                const adminBtn = document.getElementById('adminBtn');
-                if (adminBtn) adminBtn.style.display = 'none';
+            if (response.ok) {
+                this.currentUser = await response.json();
+                if (userInfo) userInfo.innerHTML = `<i class="fas fa-user-circle"></i> ${this.currentUser.username} (${this.currentUser.role})`;
+            } else {
+                this.currentUser = null;
+                if (userInfo) userInfo.innerHTML = `<a href="/login.html">Login</a>`;
+                const logoutBtn = document.getElementById('logoutBtn');
+                if (logoutBtn) logoutBtn.style.display = 'none';
             }
-        } catch (error) {
-            console.error('Failed to get user info:', error);
+        } catch (e) {
+            this.currentUser = null;
         }
     }
 
     async handleLogout() {
-        if (!confirm('Are you sure you want to logout?')) return;
-
-        try {
-            const response = await fetch('/api/auth/logout', { credentials: 'include' });
-            if (response.ok) {
-                window.location.href = '/login.html';
-                return;
-            }
-            alert('Logout failed');
-        } catch (error) {
-            alert(`Logout error: ${error.message}`);
-        }
+        await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+        window.location.href = '/login.html';
     }
 }
 
 async function deleteCourse(id, title) {
-    if (!confirm(`Are you sure you want to delete course "${title}"?`)) return;
-
+    if (!confirm(`Delete "${title}"?`)) return;
     try {
-        const response = await fetch(`/api/courses/${id}`, {
-            method: 'DELETE',
-            credentials: 'include'
-        });
-
-        if (response.status === 403) {
-            alert('Permission denied. Only admins can delete courses.');
-            return;
-        }
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Failed to delete course');
-        }
-
-        alert(`Course "${title}" deleted successfully!`);
-
-        if (window.courseManager) {
+        const res = await fetch(`/api/courses/${encodeURIComponent(id)}`, { method: 'DELETE', credentials: 'include' });
+        if (res.ok) {
             window.courseManager.fetchCourses();
         } else {
-            location.reload();
+            const err = await res.json().catch(() => ({}));
+            alert(err.error || 'Failed');
         }
-
-    } catch (error) {
-        alert('Error: ' + error.message);
+    } catch (e) {
+        alert(e.message);
     }
 }
 

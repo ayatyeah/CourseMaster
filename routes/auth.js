@@ -1,61 +1,54 @@
 const express = require('express');
 const router = express.Router();
+const { getDb } = require('../database/db');
+const bcrypt = require('bcryptjs');
 
-const users = [
-    { id: 1, username: 'admin', password: 'admin123', role: 'admin' },
-    { id: 2, username: 'user', password: 'user123', role: 'user' }
-];
-
-router.post('/login', (req, res) => {
+router.post('/login', async (req, res) => {
     const { username, password } = req.body;
+    const db = getDb();
 
     if (!username || !password) {
         return res.status(400).json({ error: 'Username and password required' });
     }
 
-    const user = users.find(u => u.username === username && u.password === password);
+    try {
+        const user = await db.collection('users').findOne({ username });
 
-    if (!user) {
-        return res.status(401).json({ error: 'Invalid credentials' });
+        if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) return res.status(401).json({ error: 'Invalid credentials' });
+
+        req.session.regenerate((err) => {
+            if (err) return res.status(500).json({ error: 'Session error' });
+
+            req.session.userId = user._id;
+            req.session.username = user.username;
+            req.session.role = user.role;
+
+            req.session.save((err) => {
+                if (err) return res.status(500).json({ error: 'Session save error' });
+                res.json({
+                    success: true,
+                    user: {
+                        id: user._id,
+                        username: user.username,
+                        role: user.role
+                    }
+                });
+            });
+        });
+    } catch (err) {
+        res.status(500).json({ error: 'Server error' });
     }
-
-    req.session.userId = user.id;
-    req.session.username = user.username;
-    req.session.role = user.role;
-
-    res.json({
-        success: true,
-        message: 'Login successful',
-        user: {
-            id: user.id,
-            username: user.username,
-            role: user.role
-        }
-    });
 });
 
-router.get('/logout', (req, res) => {
+router.post('/logout', (req, res) => {
     req.session.destroy((err) => {
-        if (err) {
-            return res.status(500).json({ error: 'Logout failed' });
-        }
+        if (err) return res.status(500).json({ error: 'Logout failed' });
+        res.clearCookie('connect.sid');
         res.json({ success: true, message: 'Logged out successfully' });
     });
-});
-
-router.get('/check', (req, res) => {
-    if (req.session.userId) {
-        res.json({
-            loggedIn: true,
-            user: {
-                id: req.session.userId,
-                username: req.session.username,
-                role: req.session.role
-            }
-        });
-    } else {
-        res.json({ loggedIn: false });
-    }
 });
 
 module.exports = router;
