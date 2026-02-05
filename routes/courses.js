@@ -10,9 +10,7 @@ const requireAuth = (req, res, next) => {
 };
 
 const requireAdmin = (req, res, next) => {
-    if (!req.session.role || req.session.role !== 'admin') {
-        return res.status(403).json({ error: 'Admin access required' });
-    }
+    if (req.session.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
     next();
 };
 
@@ -128,7 +126,7 @@ router.post('/', requireAuth, async (req, res) => {
     }
 });
 
-router.put('/:id', requireAuth, async (req, res) => {
+router.put('/:id', requireAuth, requireAdmin, async (req, res) => {
     try {
         const db = getDb();
         const { title, price, description, instructor, duration, level, category, language } = req.body;
