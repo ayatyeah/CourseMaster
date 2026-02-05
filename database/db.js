@@ -19,13 +19,18 @@ async function connectToDb() {
 }
 
 async function getNextSequence(name) {
-    const result = await db.collection('counters').findOneAndUpdate(
+    const res = await db.collection('counters').findOneAndUpdate(
         { _id: name },
         { $inc: { seq: 1 } },
-        { returnDocument: 'after', upsert: true }
+        { upsert: true, returnDocument: 'after' }
     );
-    if (!result.value) throw new Error('Counter update failed');
-    return result.value.seq;
+
+    const doc = res?.value || res;
+    if (!doc || typeof doc.seq !== 'number') {
+        throw new Error('Counter update failed');
+    }
+
+    return doc.seq;
 }
 
 async function initDatabase() {
