@@ -9,11 +9,6 @@ const requireAuth = (req, res, next) => {
     next();
 };
 
-const requireAdmin = (req, res, next) => {
-    if (req.session.role !== 'admin') return res.status(403).json({ error: 'Admin access required' });
-    next();
-};
-
 const isObjectId = (v) => typeof v === 'string' && /^[a-f\d]{24}$/i.test(v);
 
 const normalizeCourse = (course) => {
@@ -21,8 +16,8 @@ const normalizeCourse = (course) => {
     return {
         ...course,
         id: course.id ?? (course._id ? String(course._id) : course.id),
-        _id: course._id ? String(course._id) : undefined,
-        createdBy: course.createdBy ? String(course.createdBy) : null
+        _id: course._id ? String(course._id) : course._id,
+        ownerId: course.ownerId ? String(course.ownerId) : course.ownerId
     };
 };
 
@@ -35,36 +30,18 @@ const buildCourseSelector = (rawId) => {
 
 const allowedLevels = new Set(['Beginner', 'Intermediate', 'Advanced']);
 
-async function requireOwnerOrAdmin(req, res, next) {
-    try {
-        const db = getDb();
-        const selector = buildCourseSelector(req.params.id);
-        if (!selector) return res.status(400).json({ error: 'Invalid ID format' });
-
-        const course = await db.collection('courses').findOne(selector);
-        if (!course) return res.status(404).json({ error: 'Course not found' });
-
-        const userId = String(req.session.userId);
-        const isAdmin = req.session.role === 'admin';
-        const isOwner = course.createdBy && String(course.createdBy) === userId;
-
-        if (!isAdmin && !isOwner) return res.status(403).json({ error: 'Owner access required' });
-
-        req.courseSelector = selector;
-        req.courseDoc = course;
-        next();
-    } catch (err) {
-        res.status(500).json({ error: 'Internal Server Error' });
-    }
-}
+const canModifyCourse = (req, course) => {
+    if (!req.session.userId) return false;
+    if (req.session.role === 'admin') return true;
+    const me = String(req.session.userId);
+    const owner = course?.ownerId ? String(course.ownerId) : null;
+    return owner !== null && owner === me;
+};
 
 router.get('/', async (req, res) => {
     try {
         const db = getDb();
-        const { sort, minPrice, maxPrice, page, limit } = req.query;
-
-        const p = Math.max(1, parseInt(page || '1', 10));
-        const l = Math.min(100, Math.max(1, parseInt(limit || '20', 10)));
+        const { sort, minPrice, maxPrice } = req.query;
 
         const query = {};
         const min = minPrice !== undefined ? parseFloat(minPrice) : undefined;
@@ -82,25 +59,10 @@ router.get('/', async (req, res) => {
             const key = parts[0];
             const dir = parts[1] === 'desc' ? -1 : 1;
             if (key) sortOption[key] = dir;
-        } else {
-            sortOption.createdAt = -1;
         }
 
-        const total = await db.collection('courses').countDocuments(query);
-        const items = await db.collection('courses')
-            .find(query)
-            .sort(sortOption)
-            .skip((p - 1) * l)
-            .limit(l)
-            .toArray();
-
-        res.status(200).json({
-            items: items.map(normalizeCourse),
-            page: p,
-            limit: l,
-            total,
-            pages: Math.ceil(total / l)
-        });
+        const courses = await db.collection('courses').find(query).sort(sortOption).toArray();
+        res.status(200).json(courses.map(normalizeCourse));
     } catch (err) {
         res.status(500).json({ error: 'Internal Server Error' });
     }
@@ -145,11 +107,8 @@ router.post('/', requireAuth, async (req, res) => {
         }
 
         const lvl = typeof level === 'string' && allowedLevels.has(level) ? level : 'Beginner';
-        const newId = await getNextSequence('courseId');
 
-        const userId = isObjectId(String(req.session.userId))
-            ? new ObjectId(String(req.session.userId))
-            : req.session.userId;
+        const newId = await getNextSequence('courseId');
 
         const newCourse = {
             id: newId,
@@ -161,8 +120,7 @@ router.post('/', requireAuth, async (req, res) => {
             level: lvl,
             category: category.trim(),
             language: typeof language === 'string' && language.trim().length ? language.trim() : 'English',
-            createdBy: userId,
-            createdByUsername: req.session.username || null,
+            ownerId: String(req.session.userId),
             createdAt: new Date(),
             updatedAt: new Date()
         };
@@ -174,10 +132,18 @@ router.post('/', requireAuth, async (req, res) => {
     }
 });
 
-router.put('/:id', requireAuth, requireOwnerOrAdmin, async (req, res) => {
+router.put('/:id', requireAuth, async (req, res) => {
     try {
         const db = getDb();
         const { title, price, description, instructor, duration, level, category, language } = req.body;
+        const selector = buildCourseSelector(req.params.id);
+
+        if (!selector) return res.status(400).json({ error: 'Invalid ID format' });
+
+        const existing = await db.collection('courses').findOne(selector);
+        if (!existing) return res.status(404).json({ error: 'Course not found' });
+
+        if (!canModifyCourse(req, existing)) return res.status(403).json({ error: 'Forbidden' });
 
         const updates = { updatedAt: new Date() };
 
@@ -213,20 +179,27 @@ router.put('/:id', requireAuth, requireOwnerOrAdmin, async (req, res) => {
 
         if (language !== undefined) updates.language = String(language).trim();
 
-        const result = await db.collection('courses').updateOne(req.courseSelector, { $set: updates });
-        if (result.matchedCount === 0) return res.status(404).json({ error: 'Course not found' });
-
-        const updated = await db.collection('courses').findOne(req.courseSelector);
+        await db.collection('courses').updateOne(selector, { $set: updates });
+        const updated = await db.collection('courses').findOne(selector);
         res.status(200).json(normalizeCourse(updated));
     } catch (err) {
         res.status(500).json({ error: 'Internal Server Error' });
     }
 });
 
-router.delete('/:id', requireAuth, requireOwnerOrAdmin, async (req, res) => {
+router.delete('/:id', requireAuth, async (req, res) => {
     try {
         const db = getDb();
-        const result = await db.collection('courses').deleteOne(req.courseSelector);
+        const selector = buildCourseSelector(req.params.id);
+
+        if (!selector) return res.status(400).json({ error: 'Invalid ID format' });
+
+        const existing = await db.collection('courses').findOne(selector);
+        if (!existing) return res.status(404).json({ error: 'Course not found' });
+
+        if (!canModifyCourse(req, existing)) return res.status(403).json({ error: 'Forbidden' });
+
+        const result = await db.collection('courses').deleteOne(selector);
         if (result.deletedCount === 0) return res.status(404).json({ error: 'Course not found' });
 
         res.status(200).json({ message: 'Course deleted successfully' });

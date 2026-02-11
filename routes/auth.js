@@ -22,7 +22,7 @@ router.post('/login', async (req, res) => {
         req.session.regenerate((err) => {
             if (err) return res.status(500).json({ error: 'Session error' });
 
-            req.session.userId = user._id;
+            req.session.userId = String(user._id);
             req.session.username = user.username;
             req.session.role = user.role;
 
@@ -31,7 +31,7 @@ router.post('/login', async (req, res) => {
                 res.json({
                     success: true,
                     user: {
-                        id: user._id,
+                        id: String(user._id),
                         username: user.username,
                         role: user.role
                     }

@@ -5,24 +5,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (usernameEl) usernameEl.focus();
 
-    if (!form) return;
-
     form.addEventListener("submit", async (e) => {
         e.preventDefault();
 
-        const username = usernameEl?.value.trim() || "";
-        const password = passwordEl?.value || "";
-        const btn = form.querySelector("button[type='submit']");
+        const username = usernameEl.value.trim();
+        const password = passwordEl.value;
 
-        if (!username || !password) {
-            alert("Username and password required");
-            return;
-        }
-
-        if (btn) {
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
-        }
+        const btn = form.querySelector("button");
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
 
         try {
             const res = await fetch("/api/auth/login", {
@@ -35,15 +26,15 @@ document.addEventListener("DOMContentLoaded", () => {
             let data = {};
             try { data = await res.json(); } catch (e) {}
 
-            if (!res.ok) throw new Error(data.error || "Login failed");
+            if (!res.ok) {
+                throw new Error(data.error || "Login failed");
+            }
 
             window.location.href = "/";
         } catch (err) {
             alert(err.message);
-            if (btn) {
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login';
-            }
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login';
         }
     });
 });

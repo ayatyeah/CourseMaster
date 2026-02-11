@@ -3,10 +3,6 @@ class CourseManager {
         this.API_URL = window.location.origin + '/api/courses';
         this.currentCourses = [];
         this.currentUser = null;
-        this.page = 1;
-        this.limit = 10;
-        this.pages = 1;
-        this.total = 0;
         this.init();
     }
 
@@ -53,12 +49,12 @@ class CourseManager {
         }
 
         const sortFilter = document.getElementById('sortFilter');
-        if (sortFilter) sortFilter.addEventListener('change', () => { this.page = 1; this.fetchCourses(); });
+        if (sortFilter) sortFilter.addEventListener('change', () => this.fetchCourses());
 
         const min = document.getElementById('minPriceFilter');
         const max = document.getElementById('maxPriceFilter');
-        if (min) min.addEventListener('change', () => { this.page = 1; this.fetchCourses(); });
-        if (max) max.addEventListener('change', () => { this.page = 1; this.fetchCourses(); });
+        if (min) min.addEventListener('change', () => this.fetchCourses());
+        if (max) max.addEventListener('change', () => this.fetchCourses());
 
         const exportBtn = document.getElementById('exportBtn');
         if (exportBtn) {
@@ -75,19 +71,6 @@ class CourseManager {
                 this.handleLogout();
             });
         }
-
-        const prevBtn = document.getElementById('prevPageBtn');
-        const nextBtn = document.getElementById('nextPageBtn');
-        const pageSize = document.getElementById('pageSize');
-
-        if (prevBtn) prevBtn.addEventListener('click', (e) => { e.preventDefault(); if (this.page > 1) { this.page--; this.fetchCourses(); } });
-        if (nextBtn) nextBtn.addEventListener('click', (e) => { e.preventDefault(); if (this.page < this.pages) { this.page++; this.fetchCourses(); } });
-        if (pageSize) pageSize.addEventListener('change', () => {
-            const v = parseInt(pageSize.value, 10);
-            this.limit = Number.isFinite(v) ? v : 10;
-            this.page = 1;
-            this.fetchCourses();
-        });
     }
 
     async fetchCourses() {
@@ -100,39 +83,29 @@ class CourseManager {
             let url = this.API_URL;
             const params = [];
 
-            params.push(`page=${encodeURIComponent(this.page)}`);
-            params.push(`limit=${encodeURIComponent(this.limit)}`);
-
             if (sort) params.push(`sort=${encodeURIComponent(sort)}`);
             if (minPrice) params.push(`minPrice=${encodeURIComponent(minPrice)}`);
             if (maxPrice) params.push(`maxPrice=${encodeURIComponent(maxPrice)}`);
 
-            url += `?${params.join('&')}`;
+            if (params.length) url += `?${params.join('&')}`;
 
             const response = await fetch(url, { credentials: 'include' });
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-            const payload = await response.json();
-            const items = Array.isArray(payload.items) ? payload.items : [];
+            const courses = await response.json();
+            this.currentCourses = Array.isArray(courses) ? courses : [];
 
-            this.currentCourses = items;
-            this.page = payload.page || this.page;
-            this.limit = payload.limit || this.limit;
-            this.total = payload.total || 0;
-            this.pages = payload.pages || 1;
-
-            this.updateStats(this.currentCourses, this.total);
+            this.updateStats(this.currentCourses);
             this.renderCoursesTable(this.currentCourses);
-            this.renderPagination();
         } catch (error) {
             console.error(error);
             if (tbody) tbody.innerHTML = `<tr><td colspan="8">Error loading courses</td></tr>`;
         }
     }
 
-    updateStats(courses, total) {
+    updateStats(courses) {
         const totalCourses = document.getElementById('totalCourses');
-        if (totalCourses) totalCourses.textContent = total;
+        if (totalCourses) totalCourses.textContent = courses.length;
 
         const avgPriceEl = document.getElementById('avgPrice');
         const totalValueEl = document.getElementById('totalValue');
@@ -150,21 +123,11 @@ class CourseManager {
         if (totalValueEl) totalValueEl.textContent = `$${totalPrice.toFixed(2)}`;
     }
 
-    renderPagination() {
-        const info = document.getElementById('pageInfo');
-        const prevBtn = document.getElementById('prevPageBtn');
-        const nextBtn = document.getElementById('nextPageBtn');
-
-        if (info) info.textContent = `Page ${this.page} / ${this.pages} (Total: ${this.total})`;
-        if (prevBtn) prevBtn.disabled = this.page <= 1;
-        if (nextBtn) nextBtn.disabled = this.page >= this.pages;
-    }
-
-    canEditCourse(course) {
+    canModifyCourse(course) {
         if (!this.currentUser) return false;
         if (this.currentUser.role === 'admin') return true;
-        const createdBy = course.createdBy ? String(course.createdBy) : null;
-        return createdBy && String(createdBy) === String(this.currentUser.id);
+        const owner = course.ownerId ? String(course.ownerId) : null;
+        return owner !== null && String(this.currentUser.id) === owner;
     }
 
     renderCoursesTable(courses) {
@@ -188,8 +151,8 @@ class CourseManager {
             let actions = '';
             if (!isLoggedIn) {
                 actions = '<span style="font-size:0.8em; color:#999;">Read Only</span>';
-            } else if (!this.canEditCourse(course)) {
-                actions = '<span style="font-size:0.8em; color:#999;">Not Owner</span>';
+            } else if (!this.canModifyCourse(course)) {
+                actions = '<span style="font-size:0.8em; color:#999;">No Access</span>';
             } else {
                 actions =
                     `<button class="btn-action" onclick="courseManager.loadCourseForEdit('${cidSafe}')"><i class="fas fa-edit"></i></button>` +
@@ -249,7 +212,6 @@ class CourseManager {
             alert('Created successfully!');
             const form = document.getElementById('createForm');
             if (form) form.reset();
-            this.page = 1;
             await this.fetchCourses();
         } catch (error) {
             alert(error.message);
@@ -272,12 +234,12 @@ class CourseManager {
             const payload = await response.json().catch(() => ({}));
             if (!response.ok) throw new Error(payload.error || 'Not found');
 
-            if (!this.canEditCourse(payload)) {
-                alert('Owner or admin only');
+            const course = payload;
+            if (!this.canModifyCourse(course)) {
+                alert('No access');
                 return;
             }
 
-            const course = payload;
             const cid = course.id || course._id || id;
 
             const updateId = document.getElementById('updateId');
