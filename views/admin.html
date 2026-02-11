@@ -25,7 +25,7 @@
             <a href="#" id="refreshUsers">
                 <i class="fas fa-sync-alt"></i> Refresh
             </a>
-            <a href="#" id="logoutAdmin">
+            <a href="#" id="logoutBtn">
                 <i class="fas fa-sign-out-alt"></i> Logout
             </a>
         </div>
@@ -39,12 +39,12 @@
             <div class="stats">
                 <div class="stat-card">
                     <i class="fas fa-users"></i>
-                    <span class="stat-count" id="totalUsers">0</span>
+                    <span class="stat-count" id="totalUsers">2</span>
                     <span class="stat-label">Total Users</span>
                 </div>
                 <div class="stat-card">
                     <i class="fas fa-shield-alt"></i>
-                    <span class="stat-count" id="adminUsers">0</span>
+                    <span class="stat-count" id="adminUsers">1</span>
                     <span class="stat-label">Admins</span>
                 </div>
                 <div class="stat-card">
@@ -54,7 +54,7 @@
                 </div>
                 <div class="stat-card">
                     <i class="fas fa-database"></i>
-                    <span class="stat-count" id="dbSize">-</span>
+                    <span class="stat-count" id="dbSize">0 MB</span>
                     <span class="stat-label">Database</span>
                 </div>
             </div>
@@ -89,7 +89,7 @@
                             </div>
                             <div class="form-group">
                                 <label for="newUserId"><i class="fas fa-id-card"></i> User ID</label>
-                                <input type="text" id="newUserId" placeholder="Auto-generated" disabled>
+                                <input type="number" id="newUserId" placeholder="Auto-generated" disabled>
                             </div>
                         </div>
                         <div class="form-actions">
@@ -113,83 +113,170 @@
                         <table class="courses-table">
                             <thead>
                             <tr>
+                                <th width="80">ID</th>
                                 <th>USERNAME</th>
                                 <th width="120">ROLE</th>
-                                <th width="160">ACTIONS</th>
+                                <th width="100">ACTIONS</th>
                             </tr>
                             </thead>
-                            <tbody id="usersTableBody"></tbody>
+                            <tbody id="usersTableBody">
+                            <tr>
+                                <td colspan="4" class="empty-state">
+                                    <i class="fas fa-spinner fa-spin"></i>
+                                    <p>Loading users...</p>
+                                </td>
+                            </tr>
+                            </tbody>
                         </table>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="modal" id="editUserModal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3><i class="fas fa-user-edit"></i> Edit User</h3>
-                    <button class="modal-close" data-close="editUserModal">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <form id="editUserForm">
-                        <input type="hidden" id="editUserId">
-                        <div class="form-group">
-                            <label for="editUsername"><i class="fas fa-user"></i> Username</label>
-                            <input type="text" id="editUsername" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="editRole"><i class="fas fa-user-tag"></i> Role</label>
-                            <select id="editRole" required>
-                                <option value="user">User</option>
-                                <option value="admin">Admin</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="editPassword"><i class="fas fa-lock"></i> New Password (Optional)</label>
-                            <input type="password" id="editPassword" placeholder="Leave empty to keep current">
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" data-close="editUserModal">
-                        <i class="fas fa-times"></i> Cancel
-                    </button>
-                    <button class="btn btn-primary" id="saveUserBtn">
-                        <i class="fas fa-save"></i> Save Changes
-                    </button>
+        <div class="crud-section glass">
+            <div class="section-header">
+                <h2><i class="fas fa-tools"></i> System Tools</h2>
+            </div>
+            <div class="form-card">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+                    <div class="tool-card">
+                        <h3><i class="fas fa-database"></i> Database Maintenance</h3>
+                        <p>Optimize and clean database</p>
+                        <button class="btn btn-small btn-secondary" id="cleanDbBtn">
+                            <i class="fas fa-broom"></i> Clean Database
+                        </button>
+                    </div>
+
+                    <div class="tool-card">
+                        <h3><i class="fas fa-file-export"></i> Data Export</h3>
+                        <p>Export all system data</p>
+                        <button class="btn btn-small btn-secondary" id="exportAllBtn">
+                            <i class="fas fa-download"></i> Export All Data
+                        </button>
+                    </div>
+
+                    <div class="tool-card">
+                        <h3><i class="fas fa-chart-bar"></i> Analytics</h3>
+                        <p>View detailed analytics</p>
+                        <button class="btn btn-small btn-secondary" id="analyticsBtn">
+                            <i class="fas fa-chart-line"></i> View Reports
+                        </button>
+                    </div>
+
+                    <div class="tool-card">
+                        <h3><i class="fas fa-cogs"></i> System Settings</h3>
+                        <p>Configure platform settings</p>
+                        <button class="btn btn-small btn-secondary" id="settingsBtn">
+                            <i class="fas fa-sliders-h"></i> Configure
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <div class="modal" id="confirmDeleteUserModal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3><i class="fas fa-user-slash"></i> Delete User</h3>
-                    <button class="modal-close" data-close="confirmDeleteUserModal">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <p style="margin-bottom: 20px; font-size: 1.1rem;">
-                        Are you sure you want to delete user <strong id="deleteUserName">-</strong>?
-                    </p>
-                    <div style="padding: 15px; background: rgba(239, 68, 68, 0.1); border-radius: 8px;">
-                        <p style="margin: 0; color: var(--danger); font-size: 0.9rem;">
-                            <i class="fas fa-exclamation-circle"></i>
-                            This action cannot be undone.
-                        </p>
+        <div class="crud-section glass">
+            <div class="section-header">
+                <h2><i class="fas fa-server"></i> System Information</h2>
+            </div>
+            <div class="form-card">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
+                    <div>
+                        <h3 style="margin-bottom: 1rem; color: var(--primary);">
+                            <i class="fas fa-info-circle"></i> Platform Info
+                        </h3>
+                        <div style="background: var(--gray-100); padding: 1.5rem; border-radius: var(--radius);">
+                            <p><strong>Version:</strong> <span id="platformVersion">2.0.0</span></p>
+                            <p><strong>Environment:</strong> <span id="environment">Development</span></p>
+                            <p><strong>API Status:</strong> <span class="status-badge online">Online</span></p>
+                            <p><strong>Database:</strong> <span class="status-badge online">Connected</span></p>
+                        </div>
                     </div>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" data-close="confirmDeleteUserModal">
-                        <i class="fas fa-times"></i> Cancel
-                    </button>
-                    <button class="btn btn-danger" id="confirmDeleteBtn">
-                        <i class="fas fa-trash"></i> Delete User
-                    </button>
+
+                    <div>
+                        <h3 style="margin-bottom: 1rem; color: var(--primary);">
+                            <i class="fas fa-exclamation-triangle"></i> Quick Actions
+                        </h3>
+                        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                            <button class="btn btn-small btn-warning" id="clearCacheBtn">
+                                <i class="fas fa-trash-alt"></i> Clear Cache
+                            </button>
+                            <button class="btn btn-small btn-info" id="diagnosticsBtn" style="background: var(--info); color: white;">
+                                <i class="fas fa-stethoscope"></i> Run Diagnostics
+                            </button>
+                            <button class="btn btn-small btn-danger" id="resetDemoBtn">
+                                <i class="fas fa-redo"></i> Reset Demo Data
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </main>
+
+    <div class="modal" id="editUserModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-user-edit"></i> Edit User</h3>
+                <button class="modal-close" type="button">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="editUserForm">
+                    <input type="hidden" id="editUserId">
+                    <div class="form-group">
+                        <label for="editUsername"><i class="fas fa-user"></i> Username</label>
+                        <input type="text" id="editUsername" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editRole"><i class="fas fa-user-tag"></i> Role</label>
+                        <select id="editRole" required>
+                            <option value="user">User</option>
+                            <option value="admin">Admin</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="editPassword"><i class="fas fa-lock"></i> New Password (Optional)</label>
+                        <input type="password" id="editPassword" placeholder="Leave empty to keep current">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" type="button" id="editCancelBtn">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button class="btn btn-primary" type="button" id="editSaveBtn">
+                    <i class="fas fa-save"></i> Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal" id="confirmDeleteUserModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-user-slash"></i> Delete User</h3>
+                <button class="modal-close" type="button">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 20px; font-size: 1.1rem;">
+                    Are you sure you want to delete user <strong id="deleteUserName">Loading...</strong>?
+                </p>
+                <div style="padding: 15px; background: rgba(239, 68, 68, 0.1); border-radius: 8px;">
+                    <p style="margin: 0; color: var(--danger); font-size: 0.9rem;">
+                        <i class="fas fa-exclamation-circle"></i>
+                        This action cannot be undone. All user data will be permanently removed.
+                    </p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" type="button" id="deleteCancelBtn">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button class="btn btn-danger" type="button" id="deleteConfirmBtn">
+                    <i class="fas fa-trash"></i> Delete User
+                </button>
+            </div>
+        </div>
+    </div>
 
     <footer class="admin-footer">
         <p>
@@ -200,9 +287,48 @@
             Server Status:
             <span class="status-badge online" id="serverStatus">Online</span>
         </p>
+        <p style="margin-top: 15px; opacity: 0.7; font-size: 0.9rem;">
+            <i class="fas fa-shield-alt"></i> Restricted Access - Administrator Only
+        </p>
     </footer>
 </div>
 
 <script src="/admin.js"></script>
+
+<style>
+    .tool-card {
+        background: var(--gray-100);
+        border-radius: var(--radius-lg);
+        padding: 1.5rem;
+        transition: var(--transition);
+        border: 1px solid var(--gray-300);
+    }
+
+    .tool-card:hover {
+        transform: translateY(-2px);
+        border-color: var(--primary-light);
+        box-shadow: var(--shadow);
+    }
+
+    .tool-card h3 {
+        color: var(--dark);
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .tool-card p {
+        color: var(--gray-600);
+        margin-bottom: 1rem;
+        font-size: 0.9rem;
+    }
+
+    @media (max-width: 768px) {
+        .tool-card {
+            padding: 1rem;
+        }
+    }
+</style>
 </body>
 </html>

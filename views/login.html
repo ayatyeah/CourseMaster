@@ -50,45 +50,6 @@
     </div>
 </div>
 
-<script>
-    document.getElementById("loginForm").addEventListener("submit", async (e) => {
-        e.preventDefault();
-
-        const username = document.getElementById("username").value.trim();
-        const password = document.getElementById("password").value;
-        const btn = e.target.querySelector("button");
-
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Logging in...';
-
-        try {
-            const res = await fetch("/api/auth/login", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify({ username, password })
-            });
-
-            let data = {};
-            try {
-                data = await res.json();
-            } catch (e) {}
-
-            if (!res.ok) {
-                throw new Error(data.error || "Login failed");
-            }
-
-            window.location.href = "/";
-        } catch (err) {
-            alert(err.message);
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Login';
-        }
-    });
-
-    document.addEventListener("DOMContentLoaded", () => {
-        document.getElementById("username").focus();
-    });
-</script>
+<script src="/login.js"></script>
 </body>
 </html>
