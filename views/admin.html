@@ -25,7 +25,7 @@
             <a href="#" id="refreshUsers">
                 <i class="fas fa-sync-alt"></i> Refresh
             </a>
-            <a href="/api/auth/logout">
+            <a href="#" id="logoutAdmin">
                 <i class="fas fa-sign-out-alt"></i> Logout
             </a>
         </div>
@@ -39,12 +39,12 @@
             <div class="stats">
                 <div class="stat-card">
                     <i class="fas fa-users"></i>
-                    <span class="stat-count" id="totalUsers">2</span>
+                    <span class="stat-count" id="totalUsers">0</span>
                     <span class="stat-label">Total Users</span>
                 </div>
                 <div class="stat-card">
                     <i class="fas fa-shield-alt"></i>
-                    <span class="stat-count" id="adminUsers">1</span>
+                    <span class="stat-count" id="adminUsers">0</span>
                     <span class="stat-label">Admins</span>
                 </div>
                 <div class="stat-card">
@@ -54,7 +54,7 @@
                 </div>
                 <div class="stat-card">
                     <i class="fas fa-database"></i>
-                    <span class="stat-count" id="dbSize">0 MB</span>
+                    <span class="stat-count" id="dbSize">-</span>
                     <span class="stat-label">Database</span>
                 </div>
             </div>
@@ -89,7 +89,7 @@
                             </div>
                             <div class="form-group">
                                 <label for="newUserId"><i class="fas fa-id-card"></i> User ID</label>
-                                <input type="number" id="newUserId" placeholder="Auto-generated" disabled>
+                                <input type="text" id="newUserId" placeholder="Auto-generated" disabled>
                             </div>
                         </div>
                         <div class="form-actions">
@@ -113,170 +113,83 @@
                         <table class="courses-table">
                             <thead>
                             <tr>
-                                <th width="80">ID</th>
                                 <th>USERNAME</th>
                                 <th width="120">ROLE</th>
-                                <th width="100">ACTIONS</th>
+                                <th width="160">ACTIONS</th>
                             </tr>
                             </thead>
-                            <tbody id="usersTableBody">
-                            <tr>
-                                <td colspan="4" class="empty-state">
-                                    <i class="fas fa-spinner fa-spin"></i>
-                                    <p>Loading users...</p>
-                                </td>
-                            </tr>
-                            </tbody>
+                            <tbody id="usersTableBody"></tbody>
                         </table>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="crud-section glass">
-            <div class="section-header">
-                <h2><i class="fas fa-tools"></i> System Tools</h2>
-            </div>
-            <div class="form-card">
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
-                    <div class="tool-card">
-                        <h3><i class="fas fa-database"></i> Database Maintenance</h3>
-                        <p>Optimize and clean database</p>
-                        <button class="btn btn-small btn-secondary" onclick="showComingSoon()">
-                            <i class="fas fa-broom"></i> Clean Database
-                        </button>
-                    </div>
-
-                    <div class="tool-card">
-                        <h3><i class="fas fa-file-export"></i> Data Export</h3>
-                        <p>Export all system data</p>
-                        <button class="btn btn-small btn-secondary" onclick="exportAllData()">
-                            <i class="fas fa-download"></i> Export All Data
-                        </button>
-                    </div>
-
-                    <div class="tool-card">
-                        <h3><i class="fas fa-chart-bar"></i> Analytics</h3>
-                        <p>View detailed analytics</p>
-                        <button class="btn btn-small btn-secondary" onclick="showAnalytics()">
-                            <i class="fas fa-chart-line"></i> View Reports
-                        </button>
-                    </div>
-
-                    <div class="tool-card">
-                        <h3><i class="fas fa-cogs"></i> System Settings</h3>
-                        <p>Configure platform settings</p>
-                        <button class="btn btn-small btn-secondary" onclick="showSettings()">
-                            <i class="fas fa-sliders-h"></i> Configure
-                        </button>
-                    </div>
+        <div class="modal" id="editUserModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-user-edit"></i> Edit User</h3>
+                    <button class="modal-close" data-close="editUserModal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="editUserForm">
+                        <input type="hidden" id="editUserId">
+                        <div class="form-group">
+                            <label for="editUsername"><i class="fas fa-user"></i> Username</label>
+                            <input type="text" id="editUsername" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editRole"><i class="fas fa-user-tag"></i> Role</label>
+                            <select id="editRole" required>
+                                <option value="user">User</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="editPassword"><i class="fas fa-lock"></i> New Password (Optional)</label>
+                            <input type="password" id="editPassword" placeholder="Leave empty to keep current">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-close="editUserModal">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button class="btn btn-primary" id="saveUserBtn">
+                        <i class="fas fa-save"></i> Save Changes
+                    </button>
                 </div>
             </div>
         </div>
 
-        <div class="crud-section glass">
-            <div class="section-header">
-                <h2><i class="fas fa-server"></i> System Information</h2>
-            </div>
-            <div class="form-card">
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem;">
-                    <div>
-                        <h3 style="margin-bottom: 1rem; color: var(--primary);">
-                            <i class="fas fa-info-circle"></i> Platform Info
-                        </h3>
-                        <div style="background: var(--gray-100); padding: 1.5rem; border-radius: var(--radius);">
-                            <p><strong>Version:</strong> <span id="platformVersion">2.0.0</span></p>
-                            <p><strong>Environment:</strong> <span id="environment">Development</span></p>
-                            <p><strong>API Status:</strong> <span class="status-badge online">Online</span></p>
-                            <p><strong>Database:</strong> <span class="status-badge online">Connected</span></p>
-                        </div>
+        <div class="modal" id="confirmDeleteUserModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-user-slash"></i> Delete User</h3>
+                    <button class="modal-close" data-close="confirmDeleteUserModal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p style="margin-bottom: 20px; font-size: 1.1rem;">
+                        Are you sure you want to delete user <strong id="deleteUserName">-</strong>?
+                    </p>
+                    <div style="padding: 15px; background: rgba(239, 68, 68, 0.1); border-radius: 8px;">
+                        <p style="margin: 0; color: var(--danger); font-size: 0.9rem;">
+                            <i class="fas fa-exclamation-circle"></i>
+                            This action cannot be undone.
+                        </p>
                     </div>
-
-                    <div>
-                        <h3 style="margin-bottom: 1rem; color: var(--primary);">
-                            <i class="fas fa-exclamation-triangle"></i> Quick Actions
-                        </h3>
-                        <div style="display: flex; flex-direction: column; gap: 0.75rem;">
-                            <button class="btn btn-small btn-warning" onclick="clearAllCache()">
-                                <i class="fas fa-trash-alt"></i> Clear Cache
-                            </button>
-                            <button class="btn btn-small btn-info" onclick="runDiagnostics()">
-                                <i class="fas fa-stethoscope"></i> Run Diagnostics
-                            </button>
-                            <button class="btn btn-small btn-danger" onclick="showResetModal()">
-                                <i class="fas fa-redo"></i> Reset Demo Data
-                            </button>
-                        </div>
-                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-close="confirmDeleteUserModal">
+                        <i class="fas fa-times"></i> Cancel
+                    </button>
+                    <button class="btn btn-danger" id="confirmDeleteBtn">
+                        <i class="fas fa-trash"></i> Delete User
+                    </button>
                 </div>
             </div>
         </div>
     </main>
-
-    <div class="modal" id="editUserModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3><i class="fas fa-user-edit"></i> Edit User</h3>
-                <button class="modal-close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form id="editUserForm">
-                    <input type="hidden" id="editUserId">
-                    <div class="form-group">
-                        <label for="editUsername"><i class="fas fa-user"></i> Username</label>
-                        <input type="text" id="editUsername" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="editRole"><i class="fas fa-user-tag"></i> Role</label>
-                        <select id="editRole" required>
-                            <option value="user">User</option>
-                            <option value="admin">Admin</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="editPassword"><i class="fas fa-lock"></i> New Password (Optional)</label>
-                        <input type="password" id="editPassword" placeholder="Leave empty to keep current">
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal('editUserModal')">
-                    <i class="fas fa-times"></i> Cancel
-                </button>
-                <button class="btn btn-primary" onclick="saveUserChanges()">
-                    <i class="fas fa-save"></i> Save Changes
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal" id="confirmDeleteUserModal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3><i class="fas fa-user-slash"></i> Delete User</h3>
-                <button class="modal-close">&times;</button>
-            </div>
-            <div class="modal-body">
-                <p style="margin-bottom: 20px; font-size: 1.1rem;">
-                    Are you sure you want to delete user <strong id="deleteUserName">Loading...</strong>?
-                </p>
-                <div style="padding: 15px; background: rgba(239, 68, 68, 0.1); border-radius: 8px;">
-                    <p style="margin: 0; color: var(--danger); font-size: 0.9rem;">
-                        <i class="fas fa-exclamation-circle"></i>
-                        This action cannot be undone. All user data will be permanently removed.
-                    </p>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal('confirmDeleteUserModal')">
-                    <i class="fas fa-times"></i> Cancel
-                </button>
-                <button class="btn btn-danger" onclick="confirmDeleteUser()">
-                    <i class="fas fa-trash"></i> Delete User
-                </button>
-            </div>
-        </div>
-    </div>
 
     <footer class="admin-footer">
         <p>
@@ -287,369 +200,9 @@
             Server Status:
             <span class="status-badge online" id="serverStatus">Online</span>
         </p>
-        <p style="margin-top: 15px; opacity: 0.7; font-size: 0.9rem;">
-            <i class="fas fa-shield-alt"></i> Restricted Access - Administrator Only
-        </p>
     </footer>
 </div>
 
-<script>
-    class AdminManager {
-        constructor() {
-            this.currentUsers = [
-                { id: 1, username: 'admin', password: 'admin123', role: 'admin' },
-                { id: 2, username: 'user', password: 'user123', role: 'user' }
-            ];
-            this.editUserId = null;
-            this.deleteUserId = null;
-            this.startTime = Date.now();
-            this.init();
-        }
-
-        init() {
-            this.bindEvents();
-            this.loadUserInfo();
-            this.loadUsers();
-            this.updateUptime();
-            setInterval(() => this.updateUptime(), 60000);
-        }
-
-        bindEvents() {
-            document.getElementById('addUserForm').onsubmit = (e) => this.handleAddUser(e);
-            document.getElementById('refreshUsers').onclick = () => this.loadUsers();
-            document.querySelectorAll('.modal-close').forEach(btn => {
-                btn.onclick = () => this.closeAllModals();
-            });
-        }
-
-        async loadUserInfo() {
-            try {
-                const response = await fetch('/api/me');
-                if (response.ok) {
-                    const user = await response.json();
-                    document.getElementById('userInfo').innerHTML = `
-                    <i class="fas fa-user-circle"></i> ${user.username} (${user.role.toUpperCase()})
-                `;
-                }
-            } catch (error) {
-                console.error('Failed to load user info:', error);
-            }
-        }
-
-        loadUsers() {
-            const tbody = document.getElementById('usersTableBody');
-
-            if (this.currentUsers.length === 0) {
-                tbody.innerHTML = `
-                <tr>
-                    <td colspan="4" class="empty-state">
-                        <i class="fas fa-users"></i>
-                        <p>No users found</p>
-                    </td>
-                </tr>
-            `;
-                return;
-            }
-
-            tbody.innerHTML = this.currentUsers.map(user => `
-            <tr>
-                <td class="course-id">${user.id}</td>
-                <td class="course-title">
-                    <strong>${user.username}</strong>
-                </td>
-                <td>
-                    <span class="badge" style="background: ${user.role === 'admin' ? 'var(--gradient-primary)' : 'var(--gradient-success)'}">
-                        ${user.role.toUpperCase()}
-                    </span>
-                </td>
-                <td class="course-actions">
-                    <button class="btn-action edit-btn" onclick="adminManager.editUser(${user.id})" title="Edit user" style="background: rgba(99, 102, 241, 0.1); color: var(--primary);">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <button class="btn-action delete-btn" onclick="adminManager.showDeleteUserModal(${user.id}, '${user.username}')" title="Delete user" style="background: rgba(239, 68, 68, 0.1); color: var(--danger);" ${user.id === 1 ? 'disabled' : ''}>
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </td>
-            </tr>
-        `).join('');
-
-            this.updateUserStats();
-        }
-
-        updateUserStats() {
-            document.getElementById('totalUsers').textContent = this.currentUsers.length;
-            document.getElementById('adminUsers').textContent = this.currentUsers.filter(u => u.role === 'admin').length;
-        }
-
-        updateUptime() {
-            const uptime = Date.now() - this.startTime;
-            const days = Math.floor(uptime / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((uptime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            document.getElementById('serverUptime').textContent = `${days}d ${hours}h`;
-        }
-
-        handleAddUser(e) {
-            e.preventDefault();
-
-            const username = document.getElementById('newUsername').value.trim();
-            const password = document.getElementById('newPassword').value;
-            const role = document.getElementById('newRole').value;
-
-            if (!username || !password) {
-                this.showAlert('Please fill in all required fields', 'warning');
-                return;
-            }
-
-            if (this.currentUsers.some(u => u.username === username)) {
-                this.showAlert('Username already exists', 'error');
-                return;
-            }
-
-            const newId = this.currentUsers.length > 0 ?
-                Math.max(...this.currentUsers.map(u => u.id)) + 1 : 1;
-
-            const newUser = {
-                id: newId,
-                username,
-                password,
-                role
-            };
-
-            this.currentUsers.push(newUser);
-            this.loadUsers();
-            this.showAlert(`User "${username}" created successfully`, 'success');
-            document.getElementById('addUserForm').reset();
-        }
-
-        editUser(userId) {
-            const user = this.currentUsers.find(u => u.id === userId);
-            if (!user) return;
-
-            this.editUserId = userId;
-            document.getElementById('editUserId').value = user.id;
-            document.getElementById('editUsername').value = user.username;
-            document.getElementById('editRole').value = user.role;
-            document.getElementById('editPassword').value = '';
-
-            this.openModal('editUserModal');
-        }
-
-        saveUserChanges() {
-            const userId = parseInt(document.getElementById('editUserId').value);
-            const username = document.getElementById('editUsername').value.trim();
-            const role = document.getElementById('editRole').value;
-            const password = document.getElementById('editPassword').value;
-
-            if (!username) {
-                this.showAlert('Username is required', 'warning');
-                return;
-            }
-
-            const userIndex = this.currentUsers.findIndex(u => u.id === userId);
-            if (userIndex === -1) return;
-
-            this.currentUsers[userIndex].username = username;
-            this.currentUsers[userIndex].role = role;
-            if (password) {
-                this.currentUsers[userIndex].password = password;
-            }
-
-            this.loadUsers();
-            this.closeModal('editUserModal');
-            this.showAlert('User updated successfully', 'success');
-        }
-
-        showDeleteUserModal(userId, username) {
-            this.deleteUserId = userId;
-            document.getElementById('deleteUserName').textContent = username;
-            this.openModal('confirmDeleteUserModal');
-        }
-
-        confirmDeleteUser() {
-            if (!this.deleteUserId) return;
-
-            this.currentUsers = this.currentUsers.filter(u => u.id !== this.deleteUserId);
-            this.loadUsers();
-            this.closeModal('confirmDeleteUserModal');
-            this.showAlert('User deleted successfully', 'success');
-            this.deleteUserId = null;
-        }
-
-        openModal(modalId) {
-            document.getElementById(modalId).style.display = 'flex';
-            document.body.style.overflow = 'hidden';
-        }
-
-        closeModal(modalId) {
-            document.getElementById(modalId).style.display = 'none';
-            document.body.style.overflow = 'auto';
-        }
-
-        closeAllModals() {
-            document.querySelectorAll('.modal').forEach(modal => {
-                modal.style.display = 'none';
-            });
-            document.body.style.overflow = 'auto';
-        }
-
-        showAlert(message, type = 'info') {
-            const alert = document.createElement('div');
-            alert.className = `notification notification-${type}`;
-            alert.innerHTML = `
-            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
-            <span>${message}</span>
-            <button class="notification-close">&times;</button>
-        `;
-
-            document.body.appendChild(alert);
-
-            alert.querySelector('.notification-close').onclick = () => alert.remove();
-
-            setTimeout(() => {
-                if (alert.parentNode) {
-                    alert.style.animation = 'notificationSlideIn 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) reverse';
-                    setTimeout(() => alert.remove(), 500);
-                }
-            }, 3000);
-        }
-    }
-
-    function showComingSoon() {
-        alert('🚧 This feature is coming soon!');
-    }
-
-    function exportAllData() {
-        const data = {
-            users: adminManager.currentUsers,
-            timestamp: new Date().toISOString(),
-            version: '2.0.0'
-        };
-
-        const dataStr = JSON.stringify(data, null, 2);
-        const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-
-        const linkElement = document.createElement('a');
-        linkElement.setAttribute('href', dataUri);
-        linkElement.setAttribute('download', `coursemaster_export_${new Date().toISOString().split('T')[0]}.json`);
-        linkElement.click();
-
-        adminManager.showAlert('Data exported successfully', 'success');
-    }
-
-    function showAnalytics() {
-        const analytics = `
-        📊 System Analytics:
-
-        • Total Users: ${adminManager.currentUsers.length}
-        • Admin Users: ${adminManager.currentUsers.filter(u => u.role === 'admin').length}
-        • Regular Users: ${adminManager.currentUsers.filter(u => u.role === 'user').length}
-
-        Features coming soon:
-        • Course enrollment statistics
-        • Revenue analytics
-        • User activity reports
-        • Performance metrics
-    `;
-
-        alert(analytics);
-    }
-
-    function showSettings() {
-        const settings = `
-        ⚙️ System Settings
-
-        Current Configuration:
-        • Authentication: Session-based
-        • Database: MongoDB
-        • Environment: Development
-        • API Version: 2.0.0
-
-        Configuration options coming soon:
-        • Email notifications
-        • Payment gateway
-        • Theme customization
-        • Security settings
-    `;
-
-        alert(settings);
-    }
-
-    function clearAllCache() {
-        if (confirm('Clear all cached data? This will log out all users.')) {
-            adminManager.showAlert('Cache cleared successfully', 'success');
-        }
-    }
-
-    function runDiagnostics() {
-        const diagnostics = `
-        🔍 System Diagnostics
-
-        Status: ✅ All systems operational
-        API: ✅ Online
-        Database: ✅ Connected
-        Authentication: ✅ Active
-
-        Performance:
-        • Response time: < 100ms
-        • Memory usage: Normal
-        • CPU load: Low
-
-        Recommendations:
-        • No issues detected
-        • System is running optimally
-    `;
-
-        alert(diagnostics);
-    }
-
-    function showResetModal() {
-        if (confirm('⚠️ WARNING: This will reset all demo data to initial state. Continue?')) {
-            adminManager.currentUsers = [
-                { id: 1, username: 'admin', password: 'admin123', role: 'admin' },
-                { id: 2, username: 'user', password: 'user123', role: 'user' }
-            ];
-            adminManager.loadUsers();
-            adminManager.showAlert('Demo data reset successfully', 'success');
-        }
-    }
-
-    const adminManager = new AdminManager();
-</script>
-
-<style>
-    .tool-card {
-        background: var(--gray-100);
-        border-radius: var(--radius-lg);
-        padding: 1.5rem;
-        transition: var(--transition);
-        border: 1px solid var(--gray-300);
-    }
-
-    .tool-card:hover {
-        transform: translateY(-2px);
-        border-color: var(--primary-light);
-        box-shadow: var(--shadow);
-    }
-
-    .tool-card h3 {
-        color: var(--dark);
-        margin-bottom: 0.5rem;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .tool-card p {
-        color: var(--gray-600);
-        margin-bottom: 1rem;
-        font-size: 0.9rem;
-    }
-
-    @media (max-width: 768px) {
-        .tool-card {
-            padding: 1rem;
-        }
-    }
-</style>
+<script src="/admin.js"></script>
 </body>
 </html>

@@ -19,6 +19,7 @@
         <i class="fas fa-user-circle"></i> Loading...
       </span>
             <a href="/" class="active"><i class="fas fa-tachometer-alt"></i> Dashboard</a>
+            <a href="/admin" style="display:none" id="adminLink"><i class="fas fa-user-shield"></i> Admin</a>
             <a href="#" id="logoutBtn"><i class="fas fa-sign-out-alt"></i> Logout</a>
         </div>
     </nav>
@@ -176,11 +177,24 @@
                         </select>
                         <input type="number" id="minPriceFilter" placeholder="Min $" style="width: 80px;">
                         <input type="number" id="maxPriceFilter" placeholder="Max $" style="width: 80px;">
+                        <select id="pageSize" style="width: 110px;">
+                            <option value="5">5 / page</option>
+                            <option value="10" selected>10 / page</option>
+                            <option value="20">20 / page</option>
+                            <option value="50">50 / page</option>
+                        </select>
                     </div>
                     <button id="refreshBtn" class="btn btn-small btn-primary"><i class="fas fa-redo"></i></button>
                     <button id="exportBtn" class="btn btn-small btn-secondary"><i class="fas fa-download"></i></button>
                 </div>
             </div>
+
+            <div style="display:flex; gap:10px; align-items:center; justify-content:flex-end; margin-bottom:12px; flex-wrap:wrap;">
+                <span id="pageInfo" style="color:#666; font-size:0.9rem;">Page 1 / 1</span>
+                <button id="prevPageBtn" class="btn btn-small btn-secondary">Prev</button>
+                <button id="nextPageBtn" class="btn btn-small btn-secondary">Next</button>
+            </div>
+
             <div class="table-container">
                 <table class="courses-table">
                     <thead>
@@ -206,5 +220,14 @@
     </footer>
 </div>
 <script src="/app.js"></script>
+<script>
+    fetch('/api/me', { credentials: 'include' })
+        .then(r => r.ok ? r.json() : null)
+        .then(u => {
+            const link = document.getElementById('adminLink');
+            if (u && u.role === 'admin') link.style.display = '';
+        })
+        .catch(() => {});
+</script>
 </body>
 </html>

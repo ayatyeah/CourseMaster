@@ -3,6 +3,10 @@ class CourseManager {
         this.API_URL = window.location.origin + '/api/courses';
         this.currentCourses = [];
         this.currentUser = null;
+        this.page = 1;
+        this.limit = 10;
+        this.pages = 1;
+        this.total = 0;
         this.init();
     }
 
@@ -49,12 +53,12 @@ class CourseManager {
         }
 
         const sortFilter = document.getElementById('sortFilter');
-        if (sortFilter) sortFilter.addEventListener('change', () => this.fetchCourses());
+        if (sortFilter) sortFilter.addEventListener('change', () => { this.page = 1; this.fetchCourses(); });
 
         const min = document.getElementById('minPriceFilter');
         const max = document.getElementById('maxPriceFilter');
-        if (min) min.addEventListener('change', () => this.fetchCourses());
-        if (max) max.addEventListener('change', () => this.fetchCourses());
+        if (min) min.addEventListener('change', () => { this.page = 1; this.fetchCourses(); });
+        if (max) max.addEventListener('change', () => { this.page = 1; this.fetchCourses(); });
 
         const exportBtn = document.getElementById('exportBtn');
         if (exportBtn) {
@@ -71,6 +75,19 @@ class CourseManager {
                 this.handleLogout();
             });
         }
+
+        const prevBtn = document.getElementById('prevPageBtn');
+        const nextBtn = document.getElementById('nextPageBtn');
+        const pageSize = document.getElementById('pageSize');
+
+        if (prevBtn) prevBtn.addEventListener('click', (e) => { e.preventDefault(); if (this.page > 1) { this.page--; this.fetchCourses(); } });
+        if (nextBtn) nextBtn.addEventListener('click', (e) => { e.preventDefault(); if (this.page < this.pages) { this.page++; this.fetchCourses(); } });
+        if (pageSize) pageSize.addEventListener('change', () => {
+            const v = parseInt(pageSize.value, 10);
+            this.limit = Number.isFinite(v) ? v : 10;
+            this.page = 1;
+            this.fetchCourses();
+        });
     }
 
     async fetchCourses() {
@@ -83,29 +100,39 @@ class CourseManager {
             let url = this.API_URL;
             const params = [];
 
+            params.push(`page=${encodeURIComponent(this.page)}`);
+            params.push(`limit=${encodeURIComponent(this.limit)}`);
+
             if (sort) params.push(`sort=${encodeURIComponent(sort)}`);
             if (minPrice) params.push(`minPrice=${encodeURIComponent(minPrice)}`);
             if (maxPrice) params.push(`maxPrice=${encodeURIComponent(maxPrice)}`);
 
-            if (params.length) url += `?${params.join('&')}`;
+            url += `?${params.join('&')}`;
 
             const response = await fetch(url, { credentials: 'include' });
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
-            const courses = await response.json();
-            this.currentCourses = Array.isArray(courses) ? courses : [];
+            const payload = await response.json();
+            const items = Array.isArray(payload.items) ? payload.items : [];
 
-            this.updateStats(this.currentCourses);
+            this.currentCourses = items;
+            this.page = payload.page || this.page;
+            this.limit = payload.limit || this.limit;
+            this.total = payload.total || 0;
+            this.pages = payload.pages || 1;
+
+            this.updateStats(this.currentCourses, this.total);
             this.renderCoursesTable(this.currentCourses);
+            this.renderPagination();
         } catch (error) {
             console.error(error);
             if (tbody) tbody.innerHTML = `<tr><td colspan="8">Error loading courses</td></tr>`;
         }
     }
 
-    updateStats(courses) {
+    updateStats(courses, total) {
         const totalCourses = document.getElementById('totalCourses');
-        if (totalCourses) totalCourses.textContent = courses.length;
+        if (totalCourses) totalCourses.textContent = total;
 
         const avgPriceEl = document.getElementById('avgPrice');
         const totalValueEl = document.getElementById('totalValue');
@@ -123,6 +150,23 @@ class CourseManager {
         if (totalValueEl) totalValueEl.textContent = `$${totalPrice.toFixed(2)}`;
     }
 
+    renderPagination() {
+        const info = document.getElementById('pageInfo');
+        const prevBtn = document.getElementById('prevPageBtn');
+        const nextBtn = document.getElementById('nextPageBtn');
+
+        if (info) info.textContent = `Page ${this.page} / ${this.pages} (Total: ${this.total})`;
+        if (prevBtn) prevBtn.disabled = this.page <= 1;
+        if (nextBtn) nextBtn.disabled = this.page >= this.pages;
+    }
+
+    canEditCourse(course) {
+        if (!this.currentUser) return false;
+        if (this.currentUser.role === 'admin') return true;
+        const createdBy = course.createdBy ? String(course.createdBy) : null;
+        return createdBy && String(createdBy) === String(this.currentUser.id);
+    }
+
     renderCoursesTable(courses) {
         const tbody = document.getElementById('coursesTableBody');
         if (!tbody) return;
@@ -132,7 +176,6 @@ class CourseManager {
             return;
         }
 
-        const isAdmin = this.currentUser?.role === 'admin';
         const isLoggedIn = !!this.currentUser;
 
         tbody.innerHTML = courses.map((course) => {
@@ -145,8 +188,8 @@ class CourseManager {
             let actions = '';
             if (!isLoggedIn) {
                 actions = '<span style="font-size:0.8em; color:#999;">Read Only</span>';
-            } else if (!isAdmin) {
-                actions = '<span style="font-size:0.8em; color:#999;">Create Only</span>';
+            } else if (!this.canEditCourse(course)) {
+                actions = '<span style="font-size:0.8em; color:#999;">Not Owner</span>';
             } else {
                 actions =
                     `<button class="btn-action" onclick="courseManager.loadCourseForEdit('${cidSafe}')"><i class="fas fa-edit"></i></button>` +
@@ -206,6 +249,7 @@ class CourseManager {
             alert('Created successfully!');
             const form = document.getElementById('createForm');
             if (form) form.reset();
+            this.page = 1;
             await this.fetchCourses();
         } catch (error) {
             alert(error.message);
@@ -218,8 +262,8 @@ class CourseManager {
     }
 
     async loadCourseForEdit(id) {
-        if (this.currentUser?.role !== 'admin') {
-            alert('Admin only');
+        if (!this.currentUser) {
+            alert('Login required');
             return;
         }
 
@@ -227,6 +271,11 @@ class CourseManager {
             const response = await fetch(`${this.API_URL}/${encodeURIComponent(id)}`, { credentials: 'include' });
             const payload = await response.json().catch(() => ({}));
             if (!response.ok) throw new Error(payload.error || 'Not found');
+
+            if (!this.canEditCourse(payload)) {
+                alert('Owner or admin only');
+                return;
+            }
 
             const course = payload;
             const cid = course.id || course._id || id;
@@ -268,8 +317,8 @@ class CourseManager {
     async handleUpdate(e) {
         e.preventDefault();
 
-        if (this.currentUser?.role !== 'admin') {
-            alert('Admin only');
+        if (!this.currentUser) {
+            alert('Login required');
             return;
         }
 
@@ -329,25 +378,16 @@ class CourseManager {
                 this.currentUser = await response.json();
                 if (userInfo) userInfo.innerHTML = `<i class="fas fa-user-circle"></i> ${this.currentUser.username} (${this.currentUser.role})`;
                 if (logoutBtn) logoutBtn.style.display = '';
-                if (this.currentUser.role !== 'admin') {
-                    const sections = document.querySelectorAll('.crud-section');
-                    if (sections.length > 1) sections[1].style.display = 'none';
-                    this.hideUpdateForm();
-                }
             } else {
                 this.currentUser = null;
                 if (userInfo) userInfo.innerHTML = `<a href="/login.html">Login</a>`;
                 if (logoutBtn) logoutBtn.style.display = 'none';
-                const sections = document.querySelectorAll('.crud-section');
-                if (sections.length > 1) sections[1].style.display = 'none';
                 this.hideUpdateForm();
             }
         } catch (e) {
             this.currentUser = null;
             if (userInfo) userInfo.innerHTML = `<a href="/login.html">Login</a>`;
             if (logoutBtn) logoutBtn.style.display = 'none';
-            const sections = document.querySelectorAll('.crud-section');
-            if (sections.length > 1) sections[1].style.display = 'none';
             this.hideUpdateForm();
         }
     }
