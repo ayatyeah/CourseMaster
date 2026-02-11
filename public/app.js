@@ -187,14 +187,22 @@ class CourseManager {
             return;
         }
 
+        const title = titleEl.value.trim();
+        const instructor = instructorEl.value.trim();
+        const category = categoryEl.value.trim();
+
+        if (!title) return alert('Title is required');
+        if (!instructor) return alert('Instructor is required');
+        if (!category) return alert('Category is required');
+
         const data = {
-            title: titleEl.value.trim(),
+            title,
             price: priceEl.value,
-            instructor: instructorEl.value.trim(),
-            category: categoryEl.value.trim(),
+            instructor,
+            category,
             level: document.getElementById('level')?.value || 'Beginner',
-            duration: document.getElementById('duration')?.value.trim() || '',
-            language: document.getElementById('language')?.value.trim() || '',
+            duration: document.getElementById('duration')?.value.trim() || 'TBD',
+            language: document.getElementById('language')?.value.trim() || 'English',
             description: document.getElementById('description')?.value.trim() || ''
         };
 
@@ -290,14 +298,23 @@ class CourseManager {
             return;
         }
 
+        const title = document.getElementById('updateTitle')?.value.trim() || '';
+        const instructor = document.getElementById('updateInstructor')?.value.trim() || '';
+        const category = document.getElementById('updateCategory')?.value.trim() || '';
+        const level = document.getElementById('updateLevel')?.value || 'Beginner';
+
+        if (!title) return alert('Title is required');
+        if (!instructor) return alert('Instructor is required');
+        if (!category) return alert('Category is required');
+
         const data = {
-            title: document.getElementById('updateTitle')?.value.trim() || '',
-            price: document.getElementById('updatePrice')?.value || '',
-            instructor: document.getElementById('updateInstructor')?.value.trim() || '',
-            category: document.getElementById('updateCategory')?.value.trim() || '',
-            level: document.getElementById('updateLevel')?.value || '',
-            duration: document.getElementById('updateDuration')?.value.trim() || '',
-            language: document.getElementById('updateLanguage')?.value.trim() || '',
+            title,
+            price: document.getElementById('updatePrice')?.value || 0,
+            instructor,
+            category,
+            level,
+            duration: document.getElementById('updateDuration')?.value.trim() || 'TBD',
+            language: document.getElementById('updateLanguage')?.value.trim() || 'English',
             description: document.getElementById('updateDescription')?.value.trim() || ''
         };
 

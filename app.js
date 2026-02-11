@@ -2,9 +2,13 @@ const express = require('express');
 const session = require('express-session');
 const MongoDBStore = require('connect-mongodb-session')(session);
 const path = require('path');
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+
 const { connectToDb } = require('./database/db');
 const coursesRoutes = require('./routes/courses');
 const authRoutes = require('./routes/auth');
+const adminRoutes = require('./routes/admin');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -18,6 +22,17 @@ const store = new MongoDBStore({
 store.on('error', (error) => console.log(error));
 
 app.set('trust proxy', 1);
+
+app.use(helmet({
+    contentSecurityPolicy: false
+}));
+
+app.use(rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 300,
+    standardHeaders: true,
+    legacyHeaders: false
+}));
 
 app.use(session({
     secret: process.env.SESSION_SECRET || 'coursemaster-secret-key-12345',
@@ -38,9 +53,16 @@ app.use(express.json());
 
 app.use('/api/auth', authRoutes);
 app.use('/api/courses', coursesRoutes);
+app.use('/api/admin', adminRoutes);
 
 const requirePageAuth = (req, res, next) => {
     if (!req.session.userId) return res.redirect('/login.html');
+    next();
+};
+
+const requireAdminPage = (req, res, next) => {
+    if (!req.session.userId) return res.redirect('/login.html');
+    if (req.session.role !== 'admin') return res.status(403).send('Forbidden');
     next();
 };
 
@@ -51,6 +73,14 @@ app.get('/login.html', (req, res) => {
 
 app.get('/', requirePageAuth, (req, res) => {
     res.sendFile(path.join(__dirname, 'views', 'index.html'));
+});
+
+app.get('/admin', requireAdminPage, (req, res) => {
+    res.sendFile(path.join(__dirname, 'views', 'admin.html'));
+});
+
+app.get('/admin.html', requireAdminPage, (req, res) => {
+    res.sendFile(path.join(__dirname, 'views', 'admin.html'));
 });
 
 app.get('/api/me', (req, res) => {

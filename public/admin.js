@@ -1,9 +1,6 @@
 class AdminManager {
     constructor() {
-        this.currentUsers = [
-            { id: 1, username: 'admin', password: 'admin123', role: 'admin' },
-            { id: 2, username: 'user', password: 'user123', role: 'user' }
-        ];
+        this.currentUsers = [];
         this.editUserId = null;
         this.deleteUserId = null;
         this.startTime = Date.now();
@@ -59,23 +56,52 @@ class AdminManager {
         if (settingsBtn) settingsBtn.onclick = () => showSettings();
         if (clearCacheBtn) clearCacheBtn.onclick = () => clearAllCache();
         if (diagnosticsBtn) diagnosticsBtn.onclick = () => runDiagnostics();
-        if (resetDemoBtn) resetDemoBtn.onclick = () => showResetModal();
+        if (resetDemoBtn) resetDemoBtn.onclick = () => this.loadUsers();
+    }
+
+    async request(url, options = {}) {
+        const res = await fetch(url, { credentials: 'include', ...options });
+        let data = {};
+        try { data = await res.json(); } catch (e) {}
+        if (!res.ok) {
+            const msg = data.error || `HTTP ${res.status}`;
+            throw new Error(msg);
+        }
+        return data;
     }
 
     async loadUserInfo() {
         try {
-            const response = await fetch('/api/me', { credentials: 'include' });
-            if (response.ok) {
-                const user = await response.json();
-                const el = document.getElementById('userInfo');
-                if (el) el.innerHTML = `<i class="fas fa-user-circle"></i> ${user.username} (${String(user.role || '').toUpperCase()})`;
-            }
+            const user = await this.request('/api/me');
+            const el = document.getElementById('userInfo');
+            if (el) el.innerHTML = `<i class="fas fa-user-circle"></i> ${user.username} (${String(user.role || '').toUpperCase()})`;
         } catch (error) {}
     }
 
-    loadUsers() {
+    async loadUsers() {
         const tbody = document.getElementById('usersTableBody');
+        if (tbody) tbody.innerHTML = `<tr><td colspan="4">Loading...</td></tr>`;
 
+        try {
+            const data = await this.request('/api/admin/users');
+            const items = Array.isArray(data.items) ? data.items : [];
+            this.currentUsers = items.map((u, idx) => ({
+                id: u.id,
+                numId: idx + 1,
+                username: u.username,
+                role: u.role,
+                createdAt: u.createdAt || null
+            }));
+            this.renderUsers();
+        } catch (e) {
+            this.currentUsers = [];
+            if (tbody) tbody.innerHTML = `<tr><td colspan="4">Error: ${e.message}</td></tr>`;
+            this.updateUserStats();
+        }
+    }
+
+    renderUsers() {
+        const tbody = document.getElementById('usersTableBody');
         if (!tbody) return;
 
         if (this.currentUsers.length === 0) {
@@ -87,12 +113,13 @@ class AdminManager {
                     </td>
                 </tr>
             `;
+            this.updateUserStats();
             return;
         }
 
         tbody.innerHTML = this.currentUsers.map(user => `
             <tr>
-                <td class="course-id">${user.id}</td>
+                <td class="course-id">${user.numId}</td>
                 <td class="course-title"><strong>${user.username}</strong></td>
                 <td>
                     <span class="badge" style="background: ${user.role === 'admin' ? 'var(--gradient-primary)' : 'var(--gradient-success)'}">
@@ -103,7 +130,7 @@ class AdminManager {
                     <button class="btn-action edit-btn" data-edit-id="${user.id}" title="Edit user" style="background: rgba(99, 102, 241, 0.1); color: var(--primary);">
                         <i class="fas fa-edit"></i>
                     </button>
-                    <button class="btn-action delete-btn" data-del-id="${user.id}" data-del-name="${user.username}" title="Delete user" style="background: rgba(239, 68, 68, 0.1); color: var(--danger);" ${user.id === 1 ? 'disabled' : ''}>
+                    <button class="btn-action delete-btn" data-del-id="${user.id}" data-del-name="${user.username}" title="Delete user" style="background: rgba(239, 68, 68, 0.1); color: var(--danger);">
                         <i class="fas fa-trash"></i>
                     </button>
                 </td>
@@ -113,7 +140,7 @@ class AdminManager {
         tbody.querySelectorAll('[data-edit-id]').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
-                const id = parseInt(btn.getAttribute('data-edit-id'));
+                const id = btn.getAttribute('data-edit-id');
                 this.editUser(id);
             });
         });
@@ -121,7 +148,7 @@ class AdminManager {
         tbody.querySelectorAll('[data-del-id]').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
-                const id = parseInt(btn.getAttribute('data-del-id'));
+                const id = btn.getAttribute('data-del-id');
                 const name = btn.getAttribute('data-del-name') || '';
                 this.showDeleteUserModal(id, name);
             });
@@ -145,7 +172,7 @@ class AdminManager {
         if (el) el.textContent = `${days}d ${hours}h`;
     }
 
-    handleAddUser(e) {
+    async handleAddUser(e) {
         e.preventDefault();
 
         const username = document.getElementById('newUsername')?.value.trim() || '';
@@ -157,55 +184,71 @@ class AdminManager {
             return;
         }
 
-        if (this.currentUsers.some(u => u.username === username)) {
-            this.showAlert('Username already exists', 'error');
-            return;
+        try {
+            await this.request('/api/admin/users', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password, role })
+            });
+
+            const form = document.getElementById('addUserForm');
+            if (form) form.reset();
+
+            this.showAlert(`User "${username}" created successfully`, 'success');
+            await this.loadUsers();
+        } catch (err) {
+            this.showAlert(err.message, 'error');
         }
-
-        const newId = this.currentUsers.length > 0 ? Math.max(...this.currentUsers.map(u => u.id)) + 1 : 1;
-
-        this.currentUsers.push({ id: newId, username, password, role });
-        this.loadUsers();
-        this.showAlert(`User "${username}" created successfully`, 'success');
-
-        const form = document.getElementById('addUserForm');
-        if (form) form.reset();
     }
 
     editUser(userId) {
-        const user = this.currentUsers.find(u => u.id === userId);
+        const user = this.currentUsers.find(u => String(u.id) === String(userId));
         if (!user) return;
 
         this.editUserId = userId;
-        document.getElementById('editUserId').value = user.id;
-        document.getElementById('editUsername').value = user.username;
-        document.getElementById('editRole').value = user.role;
-        document.getElementById('editPassword').value = '';
+
+        const idEl = document.getElementById('editUserId');
+        const usernameEl = document.getElementById('editUsername');
+        const roleEl = document.getElementById('editRole');
+        const passEl = document.getElementById('editPassword');
+
+        if (idEl) idEl.value = user.id;
+        if (usernameEl) usernameEl.value = user.username;
+        if (roleEl) roleEl.value = user.role;
+        if (passEl) passEl.value = '';
 
         this.openModal('editUserModal');
     }
 
-    saveUserChanges() {
-        const userId = parseInt(document.getElementById('editUserId').value);
-        const username = document.getElementById('editUsername').value.trim();
-        const role = document.getElementById('editRole').value;
-        const password = document.getElementById('editPassword').value;
+    async saveUserChanges() {
+        const userId = document.getElementById('editUserId')?.value || '';
+        const username = document.getElementById('editUsername')?.value.trim() || '';
+        const role = document.getElementById('editRole')?.value || 'user';
+        const password = document.getElementById('editPassword')?.value || '';
+
+        if (!userId) return;
 
         if (!username) {
             this.showAlert('Username is required', 'warning');
             return;
         }
 
-        const userIndex = this.currentUsers.findIndex(u => u.id === userId);
-        if (userIndex === -1) return;
+        const payload = { username, role };
+        if (password && password.length) payload.password = password;
 
-        this.currentUsers[userIndex].username = username;
-        this.currentUsers[userIndex].role = role;
-        if (password) this.currentUsers[userIndex].password = password;
+        try {
+            await this.request(`/api/admin/users/${encodeURIComponent(userId)}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
 
-        this.loadUsers();
-        this.closeModal('editUserModal');
-        this.showAlert('User updated successfully', 'success');
+            this.closeModal('editUserModal');
+            this.showAlert('User updated successfully', 'success');
+            await this.loadUsers();
+        } catch (err) {
+            this.showAlert(err.message, 'error');
+        }
     }
 
     showDeleteUserModal(userId, username) {
@@ -215,14 +258,21 @@ class AdminManager {
         this.openModal('confirmDeleteUserModal');
     }
 
-    confirmDeleteUser() {
+    async confirmDeleteUser() {
         if (!this.deleteUserId) return;
 
-        this.currentUsers = this.currentUsers.filter(u => u.id !== this.deleteUserId);
-        this.loadUsers();
-        this.closeModal('confirmDeleteUserModal');
-        this.showAlert('User deleted successfully', 'success');
-        this.deleteUserId = null;
+        try {
+            await this.request(`/api/admin/users/${encodeURIComponent(this.deleteUserId)}`, {
+                method: 'DELETE'
+            });
+
+            this.closeModal('confirmDeleteUserModal');
+            this.showAlert('User deleted successfully', 'success');
+            this.deleteUserId = null;
+            await this.loadUsers();
+        } catch (err) {
+            this.showAlert(err.message, 'error');
+        }
     }
 
     openModal(modalId) {
@@ -275,7 +325,6 @@ function showComingSoon() {
 
 function exportAllData() {
     const data = {
-        users: adminManager.currentUsers,
         timestamp: new Date().toISOString(),
         version: '2.0.0'
     };
@@ -288,7 +337,7 @@ function exportAllData() {
     linkElement.setAttribute('download', `coursemaster_export_${new Date().toISOString().split('T')[0]}.json`);
     linkElement.click();
 
-    adminManager.showAlert('Data exported successfully', 'success');
+    adminManager.showAlert('Export generated', 'success');
 }
 
 function showAnalytics() {
@@ -298,12 +347,6 @@ function showAnalytics() {
         • Total Users: ${adminManager.currentUsers.length}
         • Admin Users: ${adminManager.currentUsers.filter(u => u.role === 'admin').length}
         • Regular Users: ${adminManager.currentUsers.filter(u => u.role === 'user').length}
-
-        Features coming soon:
-        • Course enrollment statistics
-        • Revenue analytics
-        • User activity reports
-        • Performance metrics
     `;
     alert(analytics);
 }
@@ -312,24 +355,16 @@ function showSettings() {
     const settings = `
         ⚙️ System Settings
 
-        Current Configuration:
         • Authentication: Session-based
         • Database: MongoDB
-        • Environment: Development
         • API Version: 2.0.0
-
-        Configuration options coming soon:
-        • Email notifications
-        • Payment gateway
-        • Theme customization
-        • Security settings
     `;
     alert(settings);
 }
 
 function clearAllCache() {
     if (confirm('Clear all cached data? This will log out all users.')) {
-        adminManager.showAlert('Cache cleared successfully', 'success');
+        adminManager.showAlert('Cache cleared', 'success');
     }
 }
 
@@ -337,32 +372,11 @@ function runDiagnostics() {
     const diagnostics = `
         🔍 System Diagnostics
 
-        Status: ✅ All systems operational
-        API: ✅ Online
-        Database: ✅ Connected
-        Authentication: ✅ Active
-
-        Performance:
-        • Response time: < 100ms
-        • Memory usage: Normal
-        • CPU load: Low
-
-        Recommendations:
-        • No issues detected
-        • System is running optimally
+        Status: ✅ Online
+        Authentication: ✅ Session
+        Database: ✅ MongoDB
     `;
     alert(diagnostics);
-}
-
-function showResetModal() {
-    if (confirm('⚠️ WARNING: This will reset all demo data to initial state. Continue?')) {
-        adminManager.currentUsers = [
-            { id: 1, username: 'admin', password: 'admin123', role: 'admin' },
-            { id: 2, username: 'user', password: 'user123', role: 'user' }
-        ];
-        adminManager.loadUsers();
-        adminManager.showAlert('Demo data reset successfully', 'success');
-    }
 }
 
 const adminManager = new AdminManager();
