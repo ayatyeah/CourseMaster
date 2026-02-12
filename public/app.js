@@ -1,8 +1,14 @@
 class CourseManager {
     constructor() {
         this.API_URL = window.location.origin + '/api/courses';
-        this.currentCourses = [];
         this.currentUser = null;
+
+        this.allCourses = [];
+        this.filteredCourses = [];
+        this.currentPage = 1;
+        this.pageSize = 10;
+        this.totalPages = 1;
+
         this.init();
     }
 
@@ -15,9 +21,8 @@ class CourseManager {
         const createForm = document.getElementById('createForm');
         const updateForm = document.getElementById('updateForm');
 
-        if (createForm) {
-            createForm.addEventListener('submit', (e) => this.handleCreate(e));
-        }
+        if (createForm) createForm.addEventListener('submit', (e) => this.handleCreate(e));
+        if (updateForm) updateForm.addEventListener('submit', (e) => this.handleUpdate(e));
 
         const searchBtn = document.getElementById('searchBtn');
         if (searchBtn) {
@@ -28,79 +33,181 @@ class CourseManager {
             });
         }
 
-        if (updateForm) {
-            updateForm.addEventListener('submit', (e) => this.handleUpdate(e));
-        }
-
         const cancelUpdate = document.getElementById('cancelUpdate');
-        if (cancelUpdate) {
-            cancelUpdate.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.hideUpdateForm();
-            });
-        }
+        if (cancelUpdate) cancelUpdate.addEventListener('click', (e) => { e.preventDefault(); this.hideUpdateForm(); });
 
         const refreshBtn = document.getElementById('refreshBtn');
         if (refreshBtn) {
             refreshBtn.addEventListener('click', (e) => {
                 e.preventDefault();
+                this.currentPage = 1;
                 this.fetchCourses();
             });
         }
 
         const sortFilter = document.getElementById('sortFilter');
-        if (sortFilter) sortFilter.addEventListener('change', () => this.fetchCourses());
+        if (sortFilter) sortFilter.addEventListener('change', () => { this.currentPage = 1; this.applyClientFiltersAndRender(); });
 
         const min = document.getElementById('minPriceFilter');
         const max = document.getElementById('maxPriceFilter');
-        if (min) min.addEventListener('change', () => this.fetchCourses());
-        if (max) max.addEventListener('change', () => this.fetchCourses());
+        if (min) min.addEventListener('change', () => { this.currentPage = 1; this.applyClientFiltersAndRender(); });
+        if (max) max.addEventListener('change', () => { this.currentPage = 1; this.applyClientFiltersAndRender(); });
 
         const exportBtn = document.getElementById('exportBtn');
-        if (exportBtn) {
-            exportBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.exportCourses();
+        if (exportBtn) exportBtn.addEventListener('click', (e) => { e.preventDefault(); this.exportCourses(); });
+
+        const logoutBtn = document.getElementById('logoutBtn');
+        if (logoutBtn) logoutBtn.addEventListener('click', (e) => { e.preventDefault(); this.handleLogout(); });
+
+        const perPage = this.getPerPageEl();
+        if (perPage) {
+            perPage.addEventListener('change', () => {
+                const v = parseInt(perPage.value, 10);
+                this.pageSize = Number.isFinite(v) && v > 0 ? v : 10;
+                this.currentPage = 1;
+                this.renderPage();
             });
         }
 
-        const logoutBtn = document.getElementById('logoutBtn');
-        if (logoutBtn) {
-            logoutBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                this.handleLogout();
-            });
-        }
+        const prevBtn = this.getPrevBtn();
+        const nextBtn = this.getNextBtn();
+        if (prevBtn) prevBtn.addEventListener('click', (e) => { e.preventDefault(); this.prevPage(); });
+        if (nextBtn) nextBtn.addEventListener('click', (e) => { e.preventDefault(); this.nextPage(); });
+    }
+
+    getPerPageEl() {
+        return document.getElementById('perPage') ||
+            document.getElementById('pageSize') ||
+            document.getElementById('pageSizeSelect') ||
+            document.querySelector('select[name="perPage"]') ||
+            document.querySelector('select[data-per-page]') ||
+            Array.from(document.querySelectorAll('select')).find(s => (s.value && String(s.value).includes('/')) || /per\s*page/i.test(s.textContent || '')) ||
+            null;
+    }
+
+    getPrevBtn() {
+        return document.getElementById('prevPage') ||
+            document.getElementById('prevBtn') ||
+            document.querySelector('[data-page="prev"]') ||
+            Array.from(document.querySelectorAll('button,a')).find(b => /prev/i.test((b.textContent || '').trim())) ||
+            null;
+    }
+
+    getNextBtn() {
+        return document.getElementById('nextPage') ||
+            document.getElementById('nextBtn') ||
+            document.querySelector('[data-page="next"]') ||
+            Array.from(document.querySelectorAll('button,a')).find(b => /next/i.test((b.textContent || '').trim())) ||
+            null;
+    }
+
+    getPageLabelEl() {
+        return document.getElementById('pageLabel') ||
+            document.getElementById('pageInfo') ||
+            document.querySelector('[data-page-label]') ||
+            Array.from(document.querySelectorAll('*')).find(el => /Page\s*\d+\s*\/\s*\d+/i.test(el.textContent || '')) ||
+            null;
     }
 
     async fetchCourses() {
         const tbody = document.getElementById('coursesTableBody');
+
         try {
-            const sort = document.getElementById('sortFilter')?.value || '';
-            const minPrice = document.getElementById('minPriceFilter')?.value || '';
-            const maxPrice = document.getElementById('maxPriceFilter')?.value || '';
-
-            let url = this.API_URL;
-            const params = [];
-
-            if (sort) params.push(`sort=${encodeURIComponent(sort)}`);
-            if (minPrice) params.push(`minPrice=${encodeURIComponent(minPrice)}`);
-            if (maxPrice) params.push(`maxPrice=${encodeURIComponent(maxPrice)}`);
-
-            if (params.length) url += `?${params.join('&')}`;
-
-            const response = await fetch(url, { credentials: 'include' });
+            const response = await fetch(this.API_URL, { credentials: 'include' });
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
             const courses = await response.json();
-            this.currentCourses = Array.isArray(courses) ? courses : [];
+            this.allCourses = Array.isArray(courses) ? courses : [];
 
-            this.updateStats(this.currentCourses);
-            this.renderCoursesTable(this.currentCourses);
+            const perPageEl = this.getPerPageEl();
+            if (perPageEl) {
+                const v = parseInt(perPageEl.value, 10);
+                if (Number.isFinite(v) && v > 0) this.pageSize = v;
+            }
+
+            this.currentPage = 1;
+            this.applyClientFiltersAndRender();
         } catch (error) {
             console.error(error);
             if (tbody) tbody.innerHTML = `<tr><td colspan="8">Error loading courses</td></tr>`;
         }
+    }
+
+    applyClientFiltersAndRender() {
+        let items = [...this.allCourses];
+
+        const minPrice = document.getElementById('minPriceFilter')?.value;
+        const maxPrice = document.getElementById('maxPriceFilter')?.value;
+
+        const min = minPrice !== undefined && String(minPrice).trim() !== '' ? parseFloat(minPrice) : null;
+        const max = maxPrice !== undefined && String(maxPrice).trim() !== '' ? parseFloat(maxPrice) : null;
+
+        if (Number.isFinite(min)) items = items.filter(c => Number(c.price || 0) >= min);
+        if (Number.isFinite(max)) items = items.filter(c => Number(c.price || 0) <= max);
+
+        const sort = document.getElementById('sortFilter')?.value || '';
+        if (sort) {
+            const [key, dirRaw] = String(sort).split(':');
+            const dir = dirRaw === 'desc' ? -1 : 1;
+
+            items.sort((a, b) => {
+                const av = a?.[key];
+                const bv = b?.[key];
+
+                if (key === 'price') return (Number(av || 0) - Number(bv || 0)) * dir;
+
+                if (key === 'title' || key === 'category' || key === 'level' || key === 'instructor') {
+                    return String(av || '').localeCompare(String(bv || '')) * dir;
+                }
+
+                if (key === 'createdAt') {
+                    return (new Date(av || 0).getTime() - new Date(bv || 0).getTime()) * dir;
+                }
+
+                return String(av || '').localeCompare(String(bv || '')) * dir;
+            });
+        }
+
+        this.filteredCourses = items;
+        this.renderPage();
+    }
+
+    renderPage() {
+        const total = this.filteredCourses.length;
+        this.totalPages = Math.max(1, Math.ceil(total / this.pageSize));
+        if (this.currentPage > this.totalPages) this.currentPage = this.totalPages;
+        if (this.currentPage < 1) this.currentPage = 1;
+
+        const start = (this.currentPage - 1) * this.pageSize;
+        const end = start + this.pageSize;
+        const pageItems = this.filteredCourses.slice(start, end);
+
+        this.updateStats(this.filteredCourses);
+        this.renderCoursesTable(pageItems);
+        this.updatePaginationUI();
+    }
+
+    updatePaginationUI() {
+        const label = this.getPageLabelEl();
+        if (label) label.textContent = `Page ${this.currentPage} / ${this.totalPages}`;
+
+        const prevBtn = this.getPrevBtn();
+        const nextBtn = this.getNextBtn();
+
+        if (prevBtn) prevBtn.disabled = this.currentPage <= 1;
+        if (nextBtn) nextBtn.disabled = this.currentPage >= this.totalPages;
+    }
+
+    prevPage() {
+        if (this.currentPage <= 1) return;
+        this.currentPage -= 1;
+        this.renderPage();
+    }
+
+    nextPage() {
+        if (this.currentPage >= this.totalPages) return;
+        this.currentPage += 1;
+        this.renderPage();
     }
 
     updateStats(courses) {
@@ -187,22 +294,14 @@ class CourseManager {
             return;
         }
 
-        const title = titleEl.value.trim();
-        const instructor = instructorEl.value.trim();
-        const category = categoryEl.value.trim();
-
-        if (!title) return alert('Title is required');
-        if (!instructor) return alert('Instructor is required');
-        if (!category) return alert('Category is required');
-
         const data = {
-            title,
+            title: titleEl.value.trim(),
             price: priceEl.value,
-            instructor,
-            category,
+            instructor: instructorEl.value.trim(),
+            category: categoryEl.value.trim(),
             level: document.getElementById('level')?.value || 'Beginner',
-            duration: document.getElementById('duration')?.value.trim() || 'TBD',
-            language: document.getElementById('language')?.value.trim() || 'English',
+            duration: document.getElementById('duration')?.value.trim() || '',
+            language: document.getElementById('language')?.value.trim() || '',
             description: document.getElementById('description')?.value.trim() || ''
         };
 
@@ -298,23 +397,14 @@ class CourseManager {
             return;
         }
 
-        const title = document.getElementById('updateTitle')?.value.trim() || '';
-        const instructor = document.getElementById('updateInstructor')?.value.trim() || '';
-        const category = document.getElementById('updateCategory')?.value.trim() || '';
-        const level = document.getElementById('updateLevel')?.value || 'Beginner';
-
-        if (!title) return alert('Title is required');
-        if (!instructor) return alert('Instructor is required');
-        if (!category) return alert('Category is required');
-
         const data = {
-            title,
-            price: document.getElementById('updatePrice')?.value || 0,
-            instructor,
-            category,
-            level,
-            duration: document.getElementById('updateDuration')?.value.trim() || 'TBD',
-            language: document.getElementById('updateLanguage')?.value.trim() || 'English',
+            title: document.getElementById('updateTitle')?.value.trim() || '',
+            price: document.getElementById('updatePrice')?.value || '',
+            instructor: document.getElementById('updateInstructor')?.value.trim() || '',
+            category: document.getElementById('updateCategory')?.value.trim() || '',
+            level: document.getElementById('updateLevel')?.value || '',
+            duration: document.getElementById('updateDuration')?.value.trim() || '',
+            language: document.getElementById('updateLanguage')?.value.trim() || '',
             description: document.getElementById('updateDescription')?.value.trim() || ''
         };
 
@@ -338,7 +428,7 @@ class CourseManager {
     }
 
     exportCourses() {
-        const dataStr = JSON.stringify(this.currentCourses, null, 2);
+        const dataStr = JSON.stringify(this.filteredCourses.length ? this.filteredCourses : this.allCourses, null, 2);
         const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
         const linkElement = document.createElement('a');
         linkElement.setAttribute('href', dataUri);
